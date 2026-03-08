@@ -71,11 +71,6 @@ _RDD_CHAIN_METHODS = {
     "mapPartitions", "mapValues", "sortByKey",
 }
 
-# Polars lazy-frame chain methods (structural detection).
-_POLARS_CHAIN_METHODS = {
-    "scan_parquet", "scan_csv", "scan_ipc", "scan_ndjson", "lazy",
-}
-
 
 def _has_pyspark_import(tree: ast.AST) -> bool:
     """Return True if the file imports pyspark."""
@@ -90,15 +85,14 @@ def _has_pyspark_import(tree: ast.AST) -> bool:
     return False
 
 
-def _find_rdd_variables(tree: ast.AST) -> set[str]:
-    """Find variable names assigned from RDD or Polars chains.
+def _find_non_spark_variables(tree: ast.AST) -> set[str]:
+    """Find variable names assigned from non-Spark chains (structural detection).
 
     Detects patterns like ``rdd = sc.parallelize(...).map(...)`` and marks
-    ``rdd`` as an RDD variable so that ``rdd.collect()`` is not flagged.
-    Uses structural chain method detection (not name guessing).
+    ``rdd`` as non-Spark so that ``rdd.collect()`` is not flagged.
     """
-    non_df_methods = _RDD_CHAIN_METHODS | _POLARS_CHAIN_METHODS
-    rdd_vars: set[str] = set()
+    non_df_methods = _RDD_CHAIN_METHODS
+    non_spark_vars: set[str] = set()
     for node in ast.walk(tree):
         if not isinstance(node, ast.Assign):
             continue
@@ -107,8 +101,8 @@ def _find_rdd_variables(tree: ast.AST) -> set[str]:
         if chain_contains_method(node.value, non_df_methods):
             for target in node.targets:
                 if isinstance(target, ast.Name):
-                    rdd_vars.add(target.id)
-    return rdd_vars
+                    non_spark_vars.add(target.id)
+    return non_spark_vars
 
 
 def find_method_without_limit(
@@ -117,14 +111,13 @@ def find_method_without_limit(
     """Yield Call nodes for `something.method_name()` not preceded by `.limit()`.
 
     Skips files without pyspark imports entirely.
-    Skips calls on RDD chains, Polars lazy frames, and variables assigned
-    from RDD/Polars operations (structural detection).
+    Skips calls on RDD chains and variables assigned from RDD operations.
     Used by SDK002 (collect) and SDK012 (toPandas).
     """
     if not _has_pyspark_import(tree):
         return
 
-    rdd_vars = _find_rdd_variables(tree)
+    non_spark_vars = _find_non_spark_variables(tree)
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
@@ -133,12 +126,12 @@ def find_method_without_limit(
         receiver = node.func.value
         if isinstance(receiver, ast.Call) and is_method_call(receiver, "limit"):
             continue
-        # Skip RDD and Polars chains (structural)
-        if chain_contains_method(node, _RDD_CHAIN_METHODS | _POLARS_CHAIN_METHODS):
+        # Skip RDD chains (structural)
+        if chain_contains_method(node, _RDD_CHAIN_METHODS):
             continue
-        # Skip variables assigned from RDD/Polars operations
+        # Skip variables assigned from RDD operations
         name = receiver_name(node)
-        if name and name in rdd_vars:
+        if name and name in non_spark_vars:
             continue
         yield node
 
