@@ -10,6 +10,7 @@ from typing import List
 
 from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import (
+    _has_pyspark_import,
     chain_contains_method,
     chain_root_name,
     is_method_call,
@@ -47,18 +48,6 @@ class UnpersistedCacheRule(Rule):
 
     _CACHE_METHODS = {"cache", "persist"}
 
-    # Root names that indicate Dask or TensorFlow, not Spark
-    _NON_SPARK_ROOTS = {"dd", "dask", "tf", "tensorflow"}
-
-    # Root names that indicate a Spark origin (used when file has mixed imports)
-    _SPARK_ROOTS = {"spark", "sc", "SparkSession", "SparkContext"}
-
-    # Chain methods from TF dataset API
-    _TF_CHAIN_METHODS = {
-        "from_tensor_slices", "from_generator", "from_tensors",
-        "batch", "prefetch", "repeat", "padded_batch",
-    }
-
     # Chain methods from RDD API (RDD.cache() is fine, no unpersist needed)
     _RDD_CHAIN_METHODS = {
         "parallelize", "textFile", "wholeTextFiles",
@@ -66,12 +55,19 @@ class UnpersistedCacheRule(Rule):
         "mapPartitions", "mapValues", "sortByKey",
     }
 
+    # Chain methods from TF dataset API
+    _TF_CHAIN_METHODS = {
+        "from_tensor_slices", "from_generator", "from_tensors",
+        "batch", "prefetch", "repeat", "padded_batch",
+    }
+
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
-        # Check for non-Spark imports (dask, tensorflow)
-        has_non_spark_imports = self._has_non_spark_imports(tree)
+        # If the file doesn't import pyspark, skip entirely — cache/persist
+        # is from another library (dask, tensorflow, etc.)
+        if not _has_pyspark_import(tree):
+            return []
 
         # First pass: build a map of variable -> assigned-from-chain-root
-        # e.g. "ddf = dd.read_parquet(...)" -> var_origins["ddf"] = "dd"
         # Skip cache/persist assignments since those just wrap the original object.
         var_origins: dict[str, str | None] = {}
         # Track which (line, col) come from assignment RHS — avoid double-counting
@@ -104,7 +100,7 @@ class UnpersistedCacheRule(Rule):
                     loc = (node.lineno, node.col_offset)
                     if loc in assigned_cache_locations:
                         continue
-                    if self._is_non_spark(node, name, var_origins, has_non_spark_imports):
+                    if self._is_non_spark(node):
                         continue
                     key = name or f"_anon_{node.lineno}_{node.col_offset}"
                     cached[key] = (method, node.lineno, node.col_offset)
@@ -116,9 +112,7 @@ class UnpersistedCacheRule(Rule):
                 if isinstance(node.value.func, ast.Attribute):
                     if node.value.func.attr in self._CACHE_METHODS:
                         assign_recv = receiver_name(node.value)
-                        if self._is_non_spark(
-                            node.value, assign_recv, var_origins, has_non_spark_imports
-                        ):
+                        if self._is_non_spark(node.value):
                             continue
                         # Track both the assignment target and the receiver
                         for target in node.targets:
@@ -154,49 +148,14 @@ class UnpersistedCacheRule(Rule):
                 )
         return diagnostics
 
-    def _is_non_spark(
-        self,
-        node: ast.Call,
-        recv_name: str | None,
-        var_origins: dict[str, str | None],
-        has_non_spark_imports: bool = False,
-    ) -> bool:
-        """Return True if this cache/persist call is on a non-Spark object."""
-        root = chain_root_name(node)
-        if root in self._NON_SPARK_ROOTS:
-            return True
+    def _is_non_spark(self, node: ast.Call) -> bool:
+        """Return True if this cache/persist call is on a non-Spark object.
+
+        Checks structural patterns (chain methods) only — no name guessing.
+        """
         if chain_contains_method(node, self._TF_CHAIN_METHODS):
             return True
         if chain_contains_method(node, self._RDD_CHAIN_METHODS):
             return True
-        # Check if the receiver variable was assigned from a non-Spark source
-        if recv_name and recv_name in var_origins:
-            origin = var_origins[recv_name]
-            if origin in self._NON_SPARK_ROOTS:
-                return True
-        # In files that import dask/tf, only fire on variables clearly from
-        # Spark. Everything else (attribute-access receivers like self.data,
-        # variables from unknown origins) is assumed non-Spark.
-        if has_non_spark_imports:
-            if recv_name is None and isinstance(node.func.value, ast.Attribute):
-                return True
-            if recv_name and recv_name not in var_origins:
-                return True
-            if recv_name and recv_name in var_origins:
-                origin = var_origins[recv_name]
-                if origin not in self._SPARK_ROOTS:
-                    return True
         return False
 
-    @staticmethod
-    def _has_non_spark_imports(tree: ast.AST) -> bool:
-        """Return True if the file imports dask or tensorflow."""
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name.split(".")[0] in ("dask", "tensorflow", "tf"):
-                        return True
-            elif isinstance(node, ast.ImportFrom):
-                if node.module and node.module.split(".")[0] in ("dask", "tensorflow", "tf"):
-                    return True
-        return False

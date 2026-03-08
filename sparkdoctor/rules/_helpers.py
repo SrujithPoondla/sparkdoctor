@@ -71,13 +71,23 @@ _RDD_CHAIN_METHODS = {
     "mapPartitions", "mapValues", "sortByKey",
 }
 
-# Polars lazy-frame chain methods.
+# Polars lazy-frame chain methods (structural detection).
 _POLARS_CHAIN_METHODS = {
     "scan_parquet", "scan_csv", "scan_ipc", "scan_ndjson", "lazy",
 }
 
-# Root variable names that indicate a non-Spark origin.
-_NON_SPARK_COLLECT_ROOTS = {"pl", "polars"}
+
+def _has_pyspark_import(tree: ast.AST) -> bool:
+    """Return True if the file imports pyspark."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.split(".")[0] == "pyspark":
+                    return True
+        elif isinstance(node, ast.ImportFrom):
+            if node.module and node.module.split(".")[0] == "pyspark":
+                return True
+    return False
 
 
 def _find_rdd_variables(tree: ast.AST) -> set[str]:
@@ -85,6 +95,7 @@ def _find_rdd_variables(tree: ast.AST) -> set[str]:
 
     Detects patterns like ``rdd = sc.parallelize(...).map(...)`` and marks
     ``rdd`` as an RDD variable so that ``rdd.collect()`` is not flagged.
+    Uses structural chain method detection (not name guessing).
     """
     non_df_methods = _RDD_CHAIN_METHODS | _POLARS_CHAIN_METHODS
     rdd_vars: set[str] = set()
@@ -93,34 +104,11 @@ def _find_rdd_variables(tree: ast.AST) -> set[str]:
             continue
         if not isinstance(node.value, ast.Call):
             continue
-        # Check if the RHS chain contains RDD/Polars methods
         if chain_contains_method(node.value, non_df_methods):
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     rdd_vars.add(target.id)
-        # Check if the RHS root is a Polars name
-        root = chain_root_name(node.value)
-        if root in _NON_SPARK_COLLECT_ROOTS:
-            for target in node.targets:
-                if isinstance(target, ast.Name):
-                    rdd_vars.add(target.id)
     return rdd_vars
-
-
-def _has_polars_import(tree: ast.AST) -> bool:
-    """Return True if the file imports polars or polars-related modules."""
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                parts = alias.name.split(".")
-                if "polars" in parts:
-                    return True
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                parts = node.module.split(".")
-                if "polars" in parts:
-                    return True
-    return False
 
 
 def find_method_without_limit(
@@ -128,12 +116,15 @@ def find_method_without_limit(
 ) -> Iterator[ast.Call]:
     """Yield Call nodes for `something.method_name()` not preceded by `.limit()`.
 
+    Skips files without pyspark imports entirely.
     Skips calls on RDD chains, Polars lazy frames, and variables assigned
-    from RDD/Polars operations.
+    from RDD/Polars operations (structural detection).
     Used by SDK002 (collect) and SDK012 (toPandas).
     """
+    if not _has_pyspark_import(tree):
+        return
+
     rdd_vars = _find_rdd_variables(tree)
-    has_polars = _has_polars_import(tree)
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
@@ -142,17 +133,12 @@ def find_method_without_limit(
         receiver = node.func.value
         if isinstance(receiver, ast.Call) and is_method_call(receiver, "limit"):
             continue
-        # Skip RDD and Polars chains (inline)
+        # Skip RDD and Polars chains (structural)
         if chain_contains_method(node, _RDD_CHAIN_METHODS | _POLARS_CHAIN_METHODS):
-            continue
-        if chain_root_name(node) in _NON_SPARK_COLLECT_ROOTS:
             continue
         # Skip variables assigned from RDD/Polars operations
         name = receiver_name(node)
         if name and name in rdd_vars:
-            continue
-        # In files that import polars, skip self.*.collect() calls
-        if has_polars and chain_root_name(node) == "self":
             continue
         yield node
 

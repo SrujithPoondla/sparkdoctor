@@ -65,39 +65,83 @@ df2.show(10)
     assert len(results) == 2
 
 
-# ── False positive regression ──────────────────────────────────────────────
+# ── False positive regression: import-based detection ──────────────────────
 
 
 def test_allows_matplotlib_show():
-    """plt.show() is matplotlib, not Spark."""
-    source = "plt.show()"
+    """plt.show() is matplotlib, not Spark — detected via import."""
+    source = """
+import matplotlib.pyplot as plt
+plt.show()
+""".strip()
     results = check(source)
     assert results == []
 
 
 def test_allows_figure_show():
-    """fig.show() is matplotlib, not Spark."""
-    source = "fig.show()"
+    """fig.show() should not fire when fig is assigned from matplotlib."""
+    source = """
+import matplotlib.pyplot as plt
+fig = plt.figure()
+fig.show()
+""".strip()
     results = check(source)
     assert results == []
 
 
-def test_allows_visualizer_show():
-    """visualizer.show() is yellowbrick/other viz libs, not Spark."""
-    source = "visualizer.show()"
+def test_allows_subplots_show():
+    """fig, ax = plt.subplots() — fig.show() via import tracking."""
+    source = """
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots()
+fig.show()
+""".strip()
     results = check(source)
     assert results == []
 
 
 def test_allows_viz_chain_show():
-    """ax.imshow(...).show() — visualization chain, not Spark."""
+    """ax.imshow(...).show() — visualization chain method, not Spark."""
     source = 'ax.imshow(data).show()'
     results = check(source)
     assert results == []
 
 
+def test_allows_plotly_show():
+    """Plotly figure.show() should not fire."""
+    source = """
+import plotly.express as px
+fig = px.scatter(data, x="x", y="y")
+fig.show()
+""".strip()
+    results = check(source)
+    assert results == []
+
+
+def test_allows_tkinter_show():
+    """Tkinter widget.show() should not fire."""
+    source = """
+import tkinter as tk
+root = tk.Tk()
+root.show()
+""".strip()
+    results = check(source)
+    assert results == []
+
+
 def test_still_detects_df_show():
-    """df.show() should still fire."""
+    """df.show() should still fire in files without viz imports."""
     source = "df.show()"
+    results = check(source)
+    assert len(results) == 1
+
+
+def test_still_detects_df_show_with_viz_imports():
+    """df.show() should still fire even if file has viz imports (df not from viz)."""
+    source = """
+import matplotlib.pyplot as plt
+fig = plt.figure()
+df.show()
+""".strip()
     results = check(source)
     assert len(results) == 1

@@ -5,6 +5,8 @@ from sparkdoctor.rules.sdk012_topandas_without_limit import ToPandasWithoutLimit
 
 RULE = ToPandasWithoutLimitRule()
 
+_PYSPARK_IMPORT = "from pyspark.sql import SparkSession\n"
+
 
 def check(source: str):
     tree = ast.parse(source)
@@ -15,14 +17,14 @@ def check(source: str):
 
 
 def test_detects_bare_topandas():
-    source = "pandas_df = spark_df.toPandas()"
+    source = _PYSPARK_IMPORT + "pandas_df = spark_df.toPandas()"
     results = check(source)
     assert len(results) == 1
     assert results[0].rule_id == "SDK012"
 
 
 def test_detects_chained_topandas_without_limit():
-    source = 'pandas_df = spark_df.filter(F.col("status") == "active").toPandas()'
+    source = _PYSPARK_IMPORT + 'pandas_df = spark_df.filter(F.col("status") == "active").toPandas()'
     results = check(source)
     assert len(results) == 1
 
@@ -31,7 +33,7 @@ def test_detects_chained_topandas_without_limit():
 
 
 def test_allows_limit_before_topandas():
-    source = "pandas_df = spark_df.limit(10_000).toPandas()"
+    source = _PYSPARK_IMPORT + "pandas_df = spark_df.limit(10_000).toPandas()"
     results = check(source)
     assert results == []
 
@@ -40,12 +42,19 @@ def test_allows_limit_before_topandas():
 
 
 def test_allows_chained_limit_before_topandas():
-    source = 'pandas_df = spark_df.filter(condition).limit(100).toPandas()'
+    source = _PYSPARK_IMPORT + 'pandas_df = spark_df.filter(condition).limit(100).toPandas()'
     results = check(source)
     assert results == []
 
 
 def test_detects_topandas_after_non_limit_chain():
-    source = 'pandas_df = spark_df.filter(condition).select("col").toPandas()'
+    source = _PYSPARK_IMPORT + 'pandas_df = spark_df.filter(condition).select("col").toPandas()'
     results = check(source)
     assert len(results) == 1
+
+
+def test_skips_file_without_pyspark_import():
+    """Files without pyspark imports should produce zero findings."""
+    source = "pandas_df = spark_df.toPandas()"
+    results = check(source)
+    assert results == []
