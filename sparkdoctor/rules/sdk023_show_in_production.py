@@ -38,10 +38,14 @@ class ShowInProductionRule(Rule):
 
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
+        guarded = self._find_guarded_lines(tree)
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
             if not is_method_call(node, "show"):
+                continue
+            # Skip if inside an if block (guarded show)
+            if node.lineno in guarded:
                 continue
             diagnostics.append(
                 Diagnostic(
@@ -56,3 +60,15 @@ class ShowInProductionRule(Rule):
                 )
             )
         return diagnostics
+
+    def _find_guarded_lines(self, tree: ast.AST) -> set[int]:
+        """Collect line numbers of all statements inside if/elif bodies."""
+        guarded: set[int] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.If):
+                for child in ast.walk(node):
+                    if child is node:
+                        continue
+                    if hasattr(child, "lineno"):
+                        guarded.add(child.lineno)
+        return guarded

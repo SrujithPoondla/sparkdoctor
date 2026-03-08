@@ -145,4 +145,36 @@ table_name = "events_raw"
 spark.sql(f"SELECT count(*) FROM {table_name}")
 
 
+# ── SDK031: collect() inside a loop ───────────────────────────────────────
+# Triggers a full Spark action on every iteration. O(N) full-dataset scans.
+groups = ["US", "GB", "DE"]
+for g in groups:
+    subset = events.filter(F.col("country") == g).collect()
+
+
+# ── SDK019: inferSchema=True ──────────────────────────────────────────────
+# Extra pass over data + unstable types.
+csv_data = spark.read.csv("s3://data-lake/uploads/raw.csv", inferSchema=True, header=True)
+
+
+# ── SDK015: Hardcoded shuffle partitions ──────────────────────────────────
+# Overrides AQE — partition count tuned for 2022 data size.
+spark.conf.set("spark.sql.shuffle.partitions", "200")
+
+
+# ── SDK014: AQE explicitly disabled ──────────────────────────────────────
+# Removes all adaptive optimizations.
+spark.conf.set("spark.sql.adaptive.enabled", "false")
+
+
+# ── SDK017: select("*") wildcard ──────────────────────────────────────────
+# Defeats column pruning on wide tables.
+everything = events.select("*")
+
+
+# ── SDK027: orderBy() immediately before write ────────────────────────────
+# Expensive global sort that's wasted — file order ≠ global order.
+result.orderBy("country").write.parquet("s3://output/sorted/")
+
+
 spark.stop()

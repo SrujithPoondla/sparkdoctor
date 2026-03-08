@@ -53,3 +53,24 @@ df2.show(10)
 """.strip()
     results = check(source)
     assert len(results) == 2
+
+
+def test_allows_guarded_show():
+    """show() inside an if block should not be flagged."""
+    source = """
+if DEBUG_MODE:
+    df.show(5)
+""".strip()
+    results = check(source)
+    assert results == []
+
+
+def test_allows_show_in_if_else():
+    source = """
+if verbose:
+    df.show()
+else:
+    pass
+""".strip()
+    results = check(source)
+    assert results == []

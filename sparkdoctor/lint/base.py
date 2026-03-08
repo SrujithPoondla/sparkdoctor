@@ -57,6 +57,17 @@ class Rule(ABC):
     severity: Severity
     title: str
 
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        # Skip validation for abstract subclasses
+        if getattr(cls, "__abstractmethods__", None):
+            return
+        for attr in ("rule_id", "severity", "title"):
+            if not hasattr(cls, attr) or getattr(cls, attr) is None:
+                raise TypeError(
+                    f"Rule subclass {cls.__name__} must define class attribute '{attr}'"
+                )
+
     @abstractmethod
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         """Analyze an AST and return diagnostics. Empty list means no findings."""

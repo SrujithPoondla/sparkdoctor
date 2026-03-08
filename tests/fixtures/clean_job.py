@@ -144,4 +144,39 @@ all_events = events.unionByName(old_events)
 event_count = spark.sql("SELECT count(*) FROM events_raw")
 
 
+# ── Correct: collect outside a loop ──────────────────────────────────────────
+# Collect once, iterate in Python — no repeated Spark actions.
+country_data = (
+    joined
+    .select("country")
+    .distinct()
+    .limit(100)
+    .collect()
+)
+for row in country_data:
+    print(row.country)
+
+
+# ── Correct: explicit schema instead of inferSchema ──────────────────────────
+from pyspark.sql.types import StructType, StructField, IntegerType
+csv_schema = StructType([
+    StructField("id", IntegerType()),
+    StructField("name", StringType()),
+])
+csv_data = spark.read.schema(csv_schema).csv("s3://data-lake/uploads/raw.csv", header=True)
+
+
+# ── Correct: let AQE manage shuffle partitions ──────────────────────────────
+# Don't set spark.sql.shuffle.partitions — AQE handles it automatically.
+# Don't disable AQE — it's on by default in Spark 3.2+.
+
+
+# ── Correct: select specific columns ────────────────────────────────────────
+subset = events.select("user_id", "event_type", "timestamp")
+
+
+# ── Correct: sortWithinPartitions instead of orderBy before write ────────────
+result.sortWithinPartitions("country").write.parquet("s3://output/sorted/")
+
+
 spark.stop()

@@ -15,6 +15,7 @@ def get_all_rules() -> list[Rule]:
     import sparkdoctor.rules as rules_pkg
 
     rules: list[Rule] = []
+    seen_ids: dict[str, str] = {}  # rule_id -> class_name
     for module_info in pkgutil.iter_modules(rules_pkg.__path__):
         if module_info.name in _EXCLUDE or module_info.name.startswith("_"):
             continue
@@ -26,5 +27,12 @@ def get_all_rules() -> list[Rule]:
                 and issubclass(attr, Rule)
                 and attr is not Rule
             ):
-                rules.append(attr())
+                instance = attr()
+                if instance.rule_id in seen_ids:
+                    raise ValueError(
+                        f"Duplicate rule ID '{instance.rule_id}': "
+                        f"{attr.__name__} conflicts with {seen_ids[instance.rule_id]}"
+                    )
+                seen_ids[instance.rule_id] = attr.__name__
+                rules.append(instance)
     return rules
