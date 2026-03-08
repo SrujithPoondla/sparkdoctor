@@ -37,8 +37,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/sparkdoctor"
-Issues = "https://github.com/yourusername/sparkdoctor/issues"
+Homepage = "https://github.com/SrujithPoondla/sparkdoctor"
+Issues = "https://github.com/SrujithPoondla/sparkdoctor/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
