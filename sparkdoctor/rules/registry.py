@@ -96,10 +96,7 @@ def _collect_rules_from_module(
 
 
 def _iter_entry_points(group: str):
-    """Yield entry points for a group (Python 3.10+)."""
+    """Yield entry points for a group."""
     from importlib.metadata import entry_points
 
-    eps = entry_points()
-    if isinstance(eps, dict):
-        return eps.get(group, [])
     return entry_points(group=group)
