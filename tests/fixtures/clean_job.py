@@ -110,4 +110,38 @@ finally:
     joined.unpersist()   # Always release, even if write fails
 
 
+# ── Correct: limit() before toPandas() ───────────────────────────────────────
+pandas_summary = result.limit(1000).toPandas()
+
+
+# ── Correct: DataFrame API instead of RDD ────────────────────────────────────
+country_list = (
+    joined
+    .select("country")
+    .distinct()
+    .limit(1000)
+    .collect()
+)
+
+
+# ── Correct: explicit join instead of crossJoin ──────────────────────────────
+categories = spark.read.parquet("s3://data-lake/categories/")
+categorized = events.join(categories, on="category_id", how="inner")
+
+
+# ── Correct: no show() in production — use logging ──────────────────────────
+import logging
+logger = logging.getLogger(__name__)
+logger.info("Pipeline complete")
+
+
+# ── Correct: unionByName() instead of union() ────────────────────────────────
+old_events = spark.read.parquet("s3://data-lake/events_2023/")
+all_events = events.unionByName(old_events)
+
+
+# ── Correct: static SQL string or DataFrame API ─────────────────────────────
+event_count = spark.sql("SELECT count(*) FROM events_raw")
+
+
 spark.stop()

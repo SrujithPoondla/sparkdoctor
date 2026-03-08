@@ -111,4 +111,38 @@ result = (
 
 result.write.mode("overwrite").parquet("s3://output/summary/")
 
+
+# ── SDK012: toPandas() without limit() ───────────────────────────────────────
+# Pulls entire DataFrame to driver as pandas — OOM on large data.
+pandas_summary = result.toPandas()
+
+
+# ── SDK013: RDD API usage on DataFrame ───────────────────────────────────────
+# Forces Python serialization, bypasses Catalyst optimizer.
+country_list = joined.rdd.map(lambda row: row.country).distinct().collect()
+
+
+# ── SDK016: crossJoin() — cartesian product ──────────────────────────────────
+# N * M rows. Two 1M-row tables = 1 trillion rows.
+categories = spark.read.parquet("s3://data-lake/categories/")
+cross = events.crossJoin(categories)
+
+
+# ── SDK023: show() left in production code ───────────────────────────────────
+# Triggers a full Spark action. Nobody sees this output in production.
+result.show()
+
+
+# ── SDK025: union() instead of unionByName() ─────────────────────────────────
+# Matches columns by position, not name. Silent data corruption risk.
+old_events = spark.read.parquet("s3://data-lake/events_2023/")
+all_events = events.union(old_events)
+
+
+# ── SDK026: f-string in spark.sql() ──────────────────────────────────────────
+# SQL injection risk and prevents Catalyst plan caching.
+table_name = "events_raw"
+spark.sql(f"SELECT count(*) FROM {table_name}")
+
+
 spark.stop()

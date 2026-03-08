@@ -47,6 +47,10 @@ def lint(
     no_color: bool = typer.Option(
         False, "--no-color", help="Disable colored output"
     ),
+    exclude: Optional[list[str]] = typer.Option(
+        None, "--exclude", "-e",
+        help="Glob patterns to exclude (e.g. 'tests' or 'test_*')"
+    ),
 ) -> None:
     """Lint PySpark files for performance anti-patterns."""
     from sparkdoctor.lint.runner import run
@@ -56,7 +60,7 @@ def lint(
         typer.echo(f"sparkdoctor: error: path not found: {path}", err=True)
         raise typer.Exit(code=2)
 
-    diagnostics, file_count = run(target)
+    diagnostics, file_count = run(target, exclude=exclude or ())
 
     # Severity filtering
     if severity is not None:

@@ -21,6 +21,7 @@ def test_bad_job_triggers_all_rules():
     rule_ids = {d.rule_id for d in diagnostics}
     expected = {
         "SDK001", "SDK002", "SDK003", "SDK004", "SDK005", "SDK006", "SDK007",
+        "SDK012", "SDK013", "SDK016", "SDK023", "SDK025", "SDK026",
     }
     assert expected.issubset(rule_ids), (
         f"Missing rules: {expected - rule_ids}"
