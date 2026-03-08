@@ -13,7 +13,7 @@ from sparkdoctor.lint.base import Severity
 
 app = typer.Typer(
     name="sparkdoctor",
-    help="A PySpark performance linter — ESLint for PySpark.",
+    help="A Spark performance linter.",
     add_completion=False,
     invoke_without_command=True,
 )
@@ -21,7 +21,7 @@ app = typer.Typer(
 
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context) -> None:
-    """A PySpark performance linter — ESLint for PySpark."""
+    """A Spark performance linter."""
     if ctx.invoked_subcommand is None and not ctx.args:
         typer.echo(ctx.get_help())
         raise typer.Exit()

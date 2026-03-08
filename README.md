@@ -1,6 +1,6 @@
 # SparkDoctor
 
-**A PySpark quality linter. Catches performance anti-patterns, correctness bugs, and style issues before they reach your cluster.**
+**A Spark quality linter. Catches performance anti-patterns, correctness bugs, and style issues before they reach your cluster.**
 
 ```
 pip install sparkdoctor
@@ -13,9 +13,8 @@ No Spark installation required. No cluster. No configuration.
 
 ## What it does
 
-SparkDoctor parses your PySpark code and flags performance anti-patterns,
-correctness bugs, and style issues — before you run anything. Think of it as
-ESLint, but for PySpark.
+SparkDoctor parses your Spark code and flags performance anti-patterns,
+correctness bugs, and style issues — before you run anything.
 
 ```
 $ sparkdoctor lint jobs/pipeline.py
