@@ -119,7 +119,11 @@ class PythonUdfRule(Rule):
     def _has_use_arrow(node: ast.Call) -> bool:
         """Return True if the call has useArrow=True."""
         for kw in node.keywords:
-            if kw.arg == "useArrow" and isinstance(kw.value, ast.Constant) and kw.value.value is True:
+            if (
+                kw.arg == "useArrow"
+                and isinstance(kw.value, ast.Constant)
+                and kw.value.value is True
+            ):
                 return True
         return False
 

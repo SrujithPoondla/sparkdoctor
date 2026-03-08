@@ -69,7 +69,11 @@ class FStringSqlRule(Rule):
         if isinstance(node, ast.JoinedStr):
             return True
         # "...".format(...): ast.Call on str.format
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "format":
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "format"
+        ):
             return True
         # "..." % (...): ast.BinOp with Mod
         return isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mod)

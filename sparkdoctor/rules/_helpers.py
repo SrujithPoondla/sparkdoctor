@@ -78,7 +78,11 @@ def _has_pyspark_import(tree: ast.AST) -> bool:
             for alias in node.names:
                 if alias.name.split(".")[0] == "pyspark":
                     return True
-        elif isinstance(node, ast.ImportFrom) and node.module and node.module.split(".")[0] == "pyspark":
+        elif (
+            isinstance(node, ast.ImportFrom)
+            and node.module
+            and node.module.split(".")[0] == "pyspark"
+        ):
             return True
     return False
 

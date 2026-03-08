@@ -100,7 +100,11 @@ class UnionByPositionRule(Rule):
         if isinstance(node, (ast.Set, ast.SetComp)):
             return True
         # set(...) or frozenset(...)
-        return isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in self._SET_CONSTRUCTORS
+        return (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id in self._SET_CONSTRUCTORS
+        )
 
     def _is_set_union(self, node: ast.Call, set_vars: set[str]) -> bool:
         """Return True if this is a Python set/frozenset .union() call."""
@@ -109,7 +113,11 @@ class UnionByPositionRule(Rule):
         if isinstance(recv, (ast.Set, ast.SetComp)):
             return True
         # set(items).union(other)
-        if isinstance(recv, ast.Call) and isinstance(recv.func, ast.Name) and recv.func.id in self._SET_CONSTRUCTORS:
+        if (
+            isinstance(recv, ast.Call)
+            and isinstance(recv.func, ast.Name)
+            and recv.func.id in self._SET_CONSTRUCTORS
+        ):
             return True
         # Receiver is a tracked set variable
         name = receiver_name(node)
@@ -119,7 +127,11 @@ class UnionByPositionRule(Rule):
         for arg in node.args:
             if isinstance(arg, (ast.Set, ast.SetComp)):
                 return True
-            if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Name) and arg.func.id in self._SET_CONSTRUCTORS:
+            if (
+                isinstance(arg, ast.Call)
+                and isinstance(arg.func, ast.Name)
+                and arg.func.id in self._SET_CONSTRUCTORS
+            ):
                 return True
             if isinstance(arg, ast.Name) and arg.id in set_vars:
                 return True
