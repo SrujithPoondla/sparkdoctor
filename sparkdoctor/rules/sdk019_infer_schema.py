@@ -31,10 +31,14 @@ class InferSchemaRule(Rule):
         "This is faster (single pass) and ensures consistent types across runs."
     )
 
+    _READ_METHODS = {"csv", "json", "load", "text", "orc"}
+
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
+                continue
+            if not self._is_read_call(node):
                 continue
             if self._has_infer_schema_true(node):
                 diagnostics.append(
@@ -49,6 +53,12 @@ class InferSchemaRule(Rule):
                     )
                 )
         return diagnostics
+
+    def _is_read_call(self, node: ast.Call) -> bool:
+        """Check if this is a Spark-style read call (.csv(), .json(), .load(), etc)."""
+        if not isinstance(node.func, ast.Attribute):
+            return False
+        return node.func.attr in self._READ_METHODS
 
     def _has_infer_schema_true(self, node: ast.Call) -> bool:
         """Check if any keyword argument is inferSchema=True."""

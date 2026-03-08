@@ -9,7 +9,7 @@ import ast
 from typing import List
 
 from sparkdoctor.lint.base import Diagnostic, Rule, Severity
-from sparkdoctor.rules._helpers import first_arg_int, is_method_call
+from sparkdoctor.rules._helpers import find_repartition_coalesce_calls
 
 
 class HardcodedRepartitionRule(Rule):
@@ -33,19 +33,10 @@ class HardcodedRepartitionRule(Rule):
         "  num_partitions = max(df.rdd.getNumPartitions(), estimated_rows // 1_000_000)"
     )
 
-    _METHODS = {"repartition", "coalesce"}
-
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            if not isinstance(node.func, ast.Attribute):
-                continue
-            if node.func.attr not in self._METHODS:
-                continue
-            n = first_arg_int(node)
-            if n is not None and n > 1:
+        for node, n in find_repartition_coalesce_calls(tree):
+            if n > 1:
                 diagnostics.append(
                     Diagnostic(
                         rule_id=self.rule_id,

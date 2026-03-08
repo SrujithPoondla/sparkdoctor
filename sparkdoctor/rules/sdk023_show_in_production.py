@@ -1,5 +1,5 @@
 """
-SDK023 — show() or print() left in production code.
+SDK023 — show() left in production code.
 
 Severity: INFO
 """
@@ -27,25 +27,20 @@ class ShowInProductionRule(Rule):
     )
 
     _SUGGESTION = (
-        "Remove .show() calls from production code, or guard them:\n"
+        "Remove .show() calls from production code, or suppress with "
+        "# noqa: SDK023 if intentional.\n"
+        "For logging, use:\n"
         "  import logging\n"
         "  logger = logging.getLogger(__name__)\n"
-        "  logger.info(f\"Row count: {df.count()}\")\n"
-        "If debugging, wrap in a condition:\n"
-        "  if DEBUG_MODE:\n"
-        "      df.show(5)"
+        "  logger.info(f\"Row count: {df.count()}\")"
     )
 
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
-        guarded = self._find_guarded_lines(tree)
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
             if not is_method_call(node, "show"):
-                continue
-            # Skip if inside an if block (guarded show)
-            if node.lineno in guarded:
                 continue
             diagnostics.append(
                 Diagnostic(
@@ -60,15 +55,3 @@ class ShowInProductionRule(Rule):
                 )
             )
         return diagnostics
-
-    def _find_guarded_lines(self, tree: ast.AST) -> set[int]:
-        """Collect line numbers of all statements inside if/elif bodies."""
-        guarded: set[int] = set()
-        for node in ast.walk(tree):
-            if isinstance(node, ast.If):
-                for child in ast.walk(node):
-                    if child is node:
-                        continue
-                    if hasattr(child, "lineno"):
-                        guarded.add(child.lineno)
-        return guarded

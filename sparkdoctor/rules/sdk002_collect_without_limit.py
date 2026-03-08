@@ -9,7 +9,7 @@ import ast
 from typing import List
 
 from sparkdoctor.lint.base import Diagnostic, Rule, Severity
-from sparkdoctor.rules._helpers import is_method_call
+from sparkdoctor.rules._helpers import find_method_without_limit
 
 
 class CollectWithoutLimitRule(Rule):
@@ -33,25 +33,15 @@ class CollectWithoutLimitRule(Rule):
     )
 
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
-        diagnostics: list[Diagnostic] = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            if not is_method_call(node, "collect"):
-                continue
-            # Check if the receiver is a .limit() call
-            receiver = node.func.value
-            if isinstance(receiver, ast.Call) and is_method_call(receiver, "limit"):
-                continue
-            diagnostics.append(
-                Diagnostic(
-                    rule_id=self.rule_id,
-                    severity=self.severity,
-                    message="collect() called without a preceding limit()",
-                    explanation=self._EXPLANATION,
-                    suggestion=self._SUGGESTION,
-                    line=node.lineno,
-                    col=node.col_offset,
-                )
+        return [
+            Diagnostic(
+                rule_id=self.rule_id,
+                severity=self.severity,
+                message="collect() called without a preceding limit()",
+                explanation=self._EXPLANATION,
+                suggestion=self._SUGGESTION,
+                line=node.lineno,
+                col=node.col_offset,
             )
-        return diagnostics
+            for node in find_method_without_limit(tree, "collect")
+        ]

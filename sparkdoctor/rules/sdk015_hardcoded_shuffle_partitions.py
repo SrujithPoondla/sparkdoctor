@@ -8,6 +8,7 @@ from __future__ import annotations
 import ast
 
 from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.rules._helpers import find_config_set_calls
 
 
 class HardcodedShufflePartitionsRule(Rule):
@@ -33,37 +34,16 @@ class HardcodedShufflePartitionsRule(Rule):
     _CONFIG_KEY = "spark.sql.shuffle.partitions"
 
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
-        diagnostics: list[Diagnostic] = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            if not isinstance(node.func, ast.Attribute):
-                continue
-            if node.func.attr not in ("set", "config"):
-                continue
-            if self._sets_shuffle_partitions(node):
-                diagnostics.append(
-                    Diagnostic(
-                        rule_id=self.rule_id,
-                        severity=self.severity,
-                        message="Hardcoded spark.sql.shuffle.partitions overrides AQE",
-                        explanation=self._EXPLANATION,
-                        suggestion=self._SUGGESTION,
-                        line=node.lineno,
-                        col=node.col_offset,
-                    )
-                )
-        return diagnostics
-
-    def _sets_shuffle_partitions(self, node: ast.Call) -> bool:
-        """Check if this call sets spark.sql.shuffle.partitions to a literal value."""
-        if len(node.args) < 2:
-            return False
-        first_arg = node.args[0]
-        if not isinstance(first_arg, ast.Constant):
-            return False
-        if first_arg.value != self._CONFIG_KEY:
-            return False
-        # Second arg must be a literal (hardcoded value)
-        second_arg = node.args[1]
-        return isinstance(second_arg, ast.Constant)
+        return [
+            Diagnostic(
+                rule_id=self.rule_id,
+                severity=self.severity,
+                message="Hardcoded spark.sql.shuffle.partitions overrides AQE",
+                explanation=self._EXPLANATION,
+                suggestion=self._SUGGESTION,
+                line=node.lineno,
+                col=node.col_offset,
+            )
+            for node in find_config_set_calls(tree, self._CONFIG_KEY)
+            if isinstance(node.args[1], ast.Constant)
+        ]

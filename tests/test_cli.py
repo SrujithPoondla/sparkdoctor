@@ -109,3 +109,31 @@ def test_lint_disable_multiple_rules():
     assert "SDK001" not in rule_ids
     assert "SDK023" not in rule_ids
     assert "SDK025" not in rule_ids
+
+
+def test_lint_exclude_directory(tmp_path):
+    """--exclude should skip matching files."""
+    # Create a mini project with a tests/ dir
+    job = tmp_path / "job.py"
+    job.write_text("df.repartition(200)")
+    test_dir = tmp_path / "tests"
+    test_dir.mkdir()
+    test_file = test_dir / "test_job.py"
+    test_file.write_text("df.repartition(100)")
+
+    # Without exclude: both files scanned
+    result = runner.invoke(
+        app, ["lint", str(tmp_path), "--format", "json"]
+    )
+    data = json.loads(result.output)
+    filenames = {d["filename"] for d in data}
+    assert any("test_job.py" in f for f in filenames)
+
+    # With exclude: tests/ skipped
+    result = runner.invoke(
+        app, ["lint", str(tmp_path), "--format", "json", "--exclude", "tests"]
+    )
+    data = json.loads(result.output)
+    filenames = {d["filename"] for d in data}
+    assert not any("test_job.py" in f for f in filenames)
+    assert len(data) >= 1  # job.py still scanned

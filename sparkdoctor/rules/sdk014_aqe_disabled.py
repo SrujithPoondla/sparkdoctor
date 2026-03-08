@@ -8,6 +8,7 @@ from __future__ import annotations
 import ast
 
 from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.rules._helpers import find_config_set_calls
 
 
 class AqeDisabledRule(Rule):
@@ -36,14 +37,8 @@ class AqeDisabledRule(Rule):
 
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            if not isinstance(node.func, ast.Attribute):
-                continue
-            if node.func.attr not in ("set", "config"):
-                continue
-            if self._disables_aqe(node):
+        for node in find_config_set_calls(tree, self._CONFIG_KEY):
+            if self._value_is_false(node.args[1]):
                 diagnostics.append(
                     Diagnostic(
                         rule_id=self.rule_id,
@@ -57,18 +52,10 @@ class AqeDisabledRule(Rule):
                 )
         return diagnostics
 
-    def _disables_aqe(self, node: ast.Call) -> bool:
-        """Check if this call sets spark.sql.adaptive.enabled to false."""
-        if len(node.args) < 2:
+    def _value_is_false(self, node: ast.expr) -> bool:
+        """Check if the value node represents a false-like value."""
+        if not isinstance(node, ast.Constant):
             return False
-        first_arg = node.args[0]
-        if not isinstance(first_arg, ast.Constant):
-            return False
-        if first_arg.value != self._CONFIG_KEY:
-            return False
-        second_arg = node.args[1]
-        if isinstance(second_arg, ast.Constant):
-            if isinstance(second_arg.value, bool):
-                return second_arg.value is False
-            return second_arg.value in self._FALSE_STRINGS
-        return False
+        if isinstance(node.value, bool):
+            return node.value is False
+        return node.value in self._FALSE_STRINGS

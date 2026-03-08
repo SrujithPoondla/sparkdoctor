@@ -21,15 +21,15 @@ def my_func(x):
     return x.upper()
 """.strip()
     results = check(source)
-    assert len(results) >= 1
-    assert any(r.rule_id == "SDK005" for r in results)
+    assert len(results) == 1
+    assert results[0].rule_id == "SDK005"
 
 
 def test_detects_udf_lambda_call():
     source = "transform = udf(lambda x: x * 2, IntegerType())"
     results = check(source)
-    assert len(results) >= 1
-    assert any(r.rule_id == "SDK005" for r in results)
+    assert len(results) == 1
+    assert results[0].rule_id == "SDK005"
 
 
 # ── True negative ───────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ def my_func(x):
 def test_detects_f_udf_call():
     source = "transform = F.udf(lambda x: x * 2, IntegerType())"
     results = check(source)
-    assert len(results) >= 1
+    assert len(results) == 1
 
 
 def test_allows_non_udf_decorator():

@@ -16,18 +16,20 @@ class Severity(str, Enum):
     INFO = "info"
 
     def __ge__(self, other: Severity) -> bool:
-        order = {Severity.ERROR: 2, Severity.WARNING: 1, Severity.INFO: 0}
-        return order[self] >= order[other]
+        return _SEVERITY_ORDER[self] >= _SEVERITY_ORDER[other]
 
     def __gt__(self, other: Severity) -> bool:
-        order = {Severity.ERROR: 2, Severity.WARNING: 1, Severity.INFO: 0}
-        return order[self] > order[other]
+        return _SEVERITY_ORDER[self] > _SEVERITY_ORDER[other]
 
     def __le__(self, other: Severity) -> bool:
         return not self.__gt__(other)
 
     def __lt__(self, other: Severity) -> bool:
         return not self.__ge__(other)
+
+
+# Defined after the class since Enum members aren't available during class body
+_SEVERITY_ORDER = {Severity.ERROR: 2, Severity.WARNING: 1, Severity.INFO: 0}
 
 
 @dataclass(frozen=True)

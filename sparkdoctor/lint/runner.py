@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ast
 import fnmatch
+import logging
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -10,6 +11,8 @@ from typing import List, Sequence, Tuple
 
 from sparkdoctor.lint.base import Diagnostic
 from sparkdoctor.lint.engine import LintEngine
+
+logger = logging.getLogger(__name__)
 
 
 def discover_files(
@@ -52,13 +55,13 @@ def lint_file(path: Path, engine: LintEngine) -> list[Diagnostic]:
     try:
         source = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        print(f"sparkdoctor: warning: could not read {path}: {exc}", file=sys.stderr)
+        logger.warning("could not read %s: %s", path, exc)
         return []
 
     try:
         tree = ast.parse(source, filename=str(path))
     except SyntaxError as exc:
-        print(f"sparkdoctor: warning: syntax error in {path}: {exc}", file=sys.stderr)
+        logger.warning("syntax error in %s: %s", path, exc)
         return []
 
     source_lines = source.splitlines()

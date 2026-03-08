@@ -62,3 +62,10 @@ def test_infer_schema_with_other_options():
     source = 'df = spark.read.csv("data.csv", header=True, inferSchema=True, sep=",")'
     results = check(source)
     assert len(results) == 1
+
+
+def test_non_spark_function_with_infer_schema():
+    """A non-Spark function with inferSchema=True should not be flagged."""
+    source = 'result = my_custom_loader("data.csv", inferSchema=True)'
+    results = check(source)
+    assert results == []

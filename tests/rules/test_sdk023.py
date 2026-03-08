@@ -27,6 +27,16 @@ def test_detects_show_with_args():
     assert len(results) == 1
 
 
+def test_detects_show_inside_if():
+    """show() inside any if block is still flagged — use # noqa to suppress."""
+    source = """
+if data_is_valid:
+    df.show(5)
+""".strip()
+    results = check(source)
+    assert len(results) == 1
+
+
 # ── True negative ───────────────────────────────────────────────────────────
 
 
@@ -53,24 +63,3 @@ df2.show(10)
 """.strip()
     results = check(source)
     assert len(results) == 2
-
-
-def test_allows_guarded_show():
-    """show() inside an if block should not be flagged."""
-    source = """
-if DEBUG_MODE:
-    df.show(5)
-""".strip()
-    results = check(source)
-    assert results == []
-
-
-def test_allows_show_in_if_else():
-    source = """
-if verbose:
-    df.show()
-else:
-    pass
-""".strip()
-    results = check(source)
-    assert results == []

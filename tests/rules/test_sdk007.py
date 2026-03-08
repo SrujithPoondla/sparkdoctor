@@ -68,3 +68,44 @@ df1.unpersist()
     results = check(source)
     assert len(results) == 1
     # df2 is the unpersisted one
+
+
+def test_assigned_cache_with_both_unpersisted():
+    """cached_df = df.cache(), both names unpersisted — clean."""
+    source = """
+cached_df = df.cache()
+process(cached_df)
+cached_df.unpersist()
+df.unpersist()
+""".strip()
+    results = check(source)
+    assert results == []
+
+
+def test_assigned_cache_with_target_unpersisted():
+    """cached_df = df.cache(), only target unpersisted — df still flagged."""
+    source = """
+cached_df = df.cache()
+process(cached_df)
+cached_df.unpersist()
+""".strip()
+    results = check(source)
+    # df is still tracked as cached but not unpersisted
+    assert len(results) == 1
+
+
+def test_assigned_cache_without_unpersist():
+    """cached_df = df.cache() without any unpersist — both flagged."""
+    source = """
+cached_df = df.cache()
+process(cached_df)
+""".strip()
+    results = check(source)
+    assert len(results) == 2
+
+
+def test_anonymous_chained_cache():
+    """df.cache().count() — anonymous cache with no variable to unpersist."""
+    source = "df.cache().count()"
+    results = check(source)
+    assert len(results) == 1
