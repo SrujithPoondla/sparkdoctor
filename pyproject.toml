@@ -38,6 +38,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/SrujithPoondla/sparkdoctor"
+Repository = "https://github.com/SrujithPoondla/sparkdoctor"
 Issues = "https://github.com/SrujithPoondla/sparkdoctor/issues"
 
 [tool.pytest.ini_options]

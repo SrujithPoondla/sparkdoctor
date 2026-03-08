@@ -8,7 +8,7 @@ the engine, CLI, or any code outside `sparkdoctor/rules/` and `tests/rules/`.
 
 ## Before You Start
 
-Check the existing rule list in `CLAUDE.md` and `docs/rules/RULE_SPECS.md`.
+Check the existing rule list in the README and `docs/rules/RULE_SPECS.md`.
 
 Ask yourself:
 1. **Is this a real problem?** Have you seen it in production code or multiple Stack Overflow questions?
