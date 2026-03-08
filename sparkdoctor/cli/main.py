@@ -1,7 +1,6 @@
 """SparkDoctor CLI — entry point for the lint command."""
 from __future__ import annotations
 
-import sys
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -129,17 +128,9 @@ def lint(
 
 def _load_output_plugin(format_name: str):
     """Try to load an output renderer from the ``sparkdoctor.outputs`` entry point group."""
+    from importlib.metadata import entry_points
 
-    if sys.version_info >= (3, 9):
-        from importlib.metadata import entry_points
-
-        eps = entry_points()
-        if isinstance(eps, dict):
-            candidates = eps.get("sparkdoctor.outputs", [])
-        else:
-            candidates = entry_points(group="sparkdoctor.outputs")
-
-        for ep in candidates:
-            if ep.name == format_name:
-                return ep.load()
+    for ep in entry_points(group="sparkdoctor.outputs"):
+        if ep.name == format_name:
+            return ep.load()
     return None

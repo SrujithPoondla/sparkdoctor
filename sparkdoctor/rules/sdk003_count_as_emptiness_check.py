@@ -56,10 +56,7 @@ class CountAsEmptinessCheckRule(Rule):
         """Return True if the Compare contains a .count() call."""
         if self._is_count_call(node.left):
             return True
-        for comparator in node.comparators:
-            if self._is_count_call(comparator):
-                return True
-        return False
+        return any(self._is_count_call(comparator) for comparator in node.comparators)
 
     def _is_count_call(self, node: ast.expr) -> bool:
         """Return True if this node is a zero-argument .count() method call.

@@ -96,9 +96,8 @@ class ShowInProductionRule(Rule):
                 for alias in node.names:
                     if alias.name.split(".")[0] in self._VIZ_IMPORT_MODULES:
                         return True
-            elif isinstance(node, ast.ImportFrom):
-                if node.module and node.module.split(".")[0] in self._VIZ_IMPORT_MODULES:
-                    return True
+            elif isinstance(node, ast.ImportFrom) and node.module and node.module.split(".")[0] in self._VIZ_IMPORT_MODULES:
+                return True
         return False
 
     def _find_viz_variables(self, tree: ast.AST) -> set[str]:
@@ -111,9 +110,8 @@ class ShowInProductionRule(Rule):
                     if alias.name.split(".")[0] in self._VIZ_IMPORT_MODULES:
                         name = alias.asname or alias.name.split(".")[-1]
                         viz_vars.add(name)
-            elif isinstance(node, ast.ImportFrom):
-                if node.module and node.module.split(".")[0] in self._VIZ_IMPORT_MODULES:
-                    for alias in node.names:
+            elif isinstance(node, ast.ImportFrom) and node.module and node.module.split(".")[0] in self._VIZ_IMPORT_MODULES:
+                for alias in node.names:
                         name = alias.asname or alias.name
                         viz_vars.add(name)
         # Track variables assigned from viz calls (fig = plt.figure())

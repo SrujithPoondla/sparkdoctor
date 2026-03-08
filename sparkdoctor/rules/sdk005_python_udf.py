@@ -107,19 +107,20 @@ class PythonUdfRule(Rule):
         if isinstance(node.func, ast.Attribute):
             if node.func.attr == "udf" and isinstance(node.func.value, ast.Name):
                 return not self._has_use_arrow(node)
-            if node.func.attr == "register":
-                if isinstance(node.func.value, ast.Attribute):
-                    if node.func.value.attr == "udf":
-                        return not self._has_use_arrow(node)
+            if (
+                node.func.attr == "register"
+                and isinstance(node.func.value, ast.Attribute)
+                and node.func.value.attr == "udf"
+            ):
+                return not self._has_use_arrow(node)
         return False
 
     @staticmethod
     def _has_use_arrow(node: ast.Call) -> bool:
         """Return True if the call has useArrow=True."""
         for kw in node.keywords:
-            if kw.arg == "useArrow" and isinstance(kw.value, ast.Constant):
-                if kw.value.value is True:
-                    return True
+            if kw.arg == "useArrow" and isinstance(kw.value, ast.Constant) and kw.value.value is True:
+                return True
         return False
 
     def _make_diagnostic(self, node: ast.AST) -> Diagnostic:
