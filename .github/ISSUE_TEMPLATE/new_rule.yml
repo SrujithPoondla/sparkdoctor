@@ -1,0 +1,106 @@
+name: New Rule
+description: Propose a new lint rule for SparkDoctor
+title: "SDKXXX: "
+labels: ["rule"]
+body:
+  - type: input
+    id: rule-id
+    attributes:
+      label: Rule ID
+      description: "Next available SDK number (e.g. SDK025)"
+      placeholder: "SDKXXX"
+    validations:
+      required: true
+
+  - type: textarea
+    id: bad-pattern
+    attributes:
+      label: Bad pattern
+      description: Code snippet showing the anti-pattern
+      render: python
+      placeholder: |
+        # What does the bad code look like?
+        df = spark.readStream.format("json").load(path)
+    validations:
+      required: true
+
+  - type: textarea
+    id: good-pattern
+    attributes:
+      label: Good pattern
+      description: Code snippet showing the correct alternative
+      render: python
+      placeholder: |
+        # What should the developer do instead?
+        df = spark.readStream.schema(my_schema).format("json").load(path)
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-it-matters
+    attributes:
+      label: Why it matters
+      description: "2-3 sentences on the impact — what breaks, what slows down, or what becomes harder to maintain"
+      placeholder: "Streaming jobs with inferred schemas break silently when source schema changes..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: detection
+    attributes:
+      label: Detection approach
+      description: How can AST analysis catch this pattern?
+      placeholder: "Walk method chains from .load() backward, check for readStream without .schema()..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - performance
+        - correctness
+        - style
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - error
+        - warning
+        - info
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: Where does this best practice come from?
+      placeholder: "Palantir PySpark Style Guide, Databricks blog, Apache Spark docs, etc."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: fp-risk
+    attributes:
+      label: False positive risk
+      options:
+        - LOW
+        - MEDIUM
+        - HIGH
+    validations:
+      required: true
+
+  - type: textarea
+    id: fp-notes
+    attributes:
+      label: False positive notes
+      description: Any known edge cases or scenarios where this could misfire?
+      placeholder: "May flag intentional cross joins used for salting..."
+    validations:
+      required: false

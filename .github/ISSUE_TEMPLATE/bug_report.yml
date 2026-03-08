@@ -1,0 +1,53 @@
+name: Bug Report
+description: Report a false positive, false negative, or other bug
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened and what did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Code to reproduce
+      description: Minimal Python snippet that triggers the issue
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Actual output
+      description: What SparkDoctor reported (or failed to report)
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+      description: What should have happened instead
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: SparkDoctor version
+      placeholder: "0.1.7"
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: "3.11"
+    validations:
+      required: false
