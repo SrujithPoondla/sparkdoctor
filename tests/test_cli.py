@@ -65,3 +65,47 @@ def test_lint_severity_filter():
     # All returned diagnostics should be error severity
     for d in data:
         assert d["severity"] == "error"
+
+
+def test_lint_disable_single_rule():
+    result = runner.invoke(
+        app,
+        [
+            "lint",
+            str(FIXTURES_DIR / "bad_job.py"),
+            "--format",
+            "json",
+            "--disable",
+            "SDK001",
+        ],
+    )
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    rule_ids = {d["rule_id"] for d in data}
+    assert "SDK001" not in rule_ids
+    # Other rules should still fire
+    assert "SDK004" in rule_ids
+
+
+def test_lint_disable_multiple_rules():
+    result = runner.invoke(
+        app,
+        [
+            "lint",
+            str(FIXTURES_DIR / "bad_job.py"),
+            "--format",
+            "json",
+            "--disable",
+            "SDK001",
+            "--disable",
+            "SDK023",
+            "--disable",
+            "SDK025",
+        ],
+    )
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    rule_ids = {d["rule_id"] for d in data}
+    assert "SDK001" not in rule_ids
+    assert "SDK023" not in rule_ids
+    assert "SDK025" not in rule_ids

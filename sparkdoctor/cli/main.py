@@ -51,6 +51,10 @@ def lint(
         None, "--exclude", "-e",
         help="Glob patterns to exclude (e.g. 'tests' or 'test_*')"
     ),
+    disable: Optional[list[str]] = typer.Option(
+        None, "--disable", "-d",
+        help="Rule IDs to disable (e.g. 'SDK023' or 'SDK002')"
+    ),
 ) -> None:
     """Lint PySpark files for performance anti-patterns."""
     from sparkdoctor.lint.runner import run
@@ -60,7 +64,10 @@ def lint(
         typer.echo(f"sparkdoctor: error: path not found: {path}", err=True)
         raise typer.Exit(code=2)
 
-    diagnostics, file_count = run(target, exclude=exclude or ())
+    disabled = set(r.upper() for r in disable) if disable else None
+    diagnostics, file_count = run(
+        target, exclude=exclude or (), disable=disabled
+    )
 
     # Severity filtering
     if severity is not None:

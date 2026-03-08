@@ -69,11 +69,12 @@ def lint_file(path: Path, engine: LintEngine) -> list[Diagnostic]:
 def run(
     path: str | Path,
     exclude: Sequence[str] = (),
+    disable: set[str] | None = None,
 ) -> tuple[list[Diagnostic], int]:
     """Discover files, lint them all, return (diagnostics, file_count)."""
     path = Path(path)
     files = discover_files(path, exclude=exclude)
-    engine = LintEngine()
+    engine = LintEngine(disable=disable)
     all_diagnostics: list[Diagnostic] = []
     for f in files:
         all_diagnostics.extend(lint_file(f, engine))

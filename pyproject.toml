@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sparkdoctor"
-version = "0.1.1"
+version = "0.1.2"
 description = "A PySpark performance linter — ESLint for PySpark"
 readme = "README.md"
 license = { text = "Apache-2.0" }
