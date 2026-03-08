@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import ast
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import find_config_set_calls
 
 
@@ -17,6 +17,7 @@ class HardcodedShufflePartitionsRule(Rule):
     rule_id = "SDK015"
     severity = Severity.WARNING
     title = "Hardcoded spark.sql.shuffle.partitions"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "Setting spark.sql.shuffle.partitions to a fixed value (commonly 200, the "

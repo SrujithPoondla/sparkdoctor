@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import find_repartition_coalesce_calls
 
 
@@ -18,6 +18,7 @@ class RepartitionToOneRule(Rule):
     rule_id = "SDK006"
     severity = Severity.ERROR
     title = "repartition(1) or coalesce(1) — forces single-partition execution"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "repartition(1) or coalesce(1) collapses the entire distributed dataset into "

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import ast
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 
 
 class OrderByBeforeWriteRule(Rule):
@@ -16,6 +16,7 @@ class OrderByBeforeWriteRule(Rule):
     rule_id = "SDK027"
     severity = Severity.WARNING
     title = "orderBy()/sort() before write is wasteful"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "orderBy() and sort() trigger a full global sort (shuffle + sort), which is "

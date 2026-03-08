@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 
 
 class RddApiUsageRule(Rule):
@@ -17,6 +17,7 @@ class RddApiUsageRule(Rule):
     rule_id = "SDK013"
     severity = Severity.ERROR
     title = "RDD API used on DataFrame"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "The RDD API forces Spark to serialize every row through Python's pickle "

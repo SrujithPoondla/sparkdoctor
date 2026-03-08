@@ -5,7 +5,7 @@ import ast
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import List
+from typing import Any, List
 
 
 class Severity(str, Enum):
@@ -32,6 +32,14 @@ class Severity(str, Enum):
 _SEVERITY_ORDER = {Severity.ERROR: 2, Severity.WARNING: 1, Severity.INFO: 0}
 
 
+class Category(str, Enum):
+    """Rule category — what kind of issue the rule detects."""
+
+    PERFORMANCE = "performance"
+    CORRECTNESS = "correctness"
+    STYLE = "style"
+
+
 @dataclass(frozen=True)
 class Diagnostic:
     """A single finding from a lint rule."""
@@ -52,12 +60,51 @@ class Diagnostic:
         return result
 
 
+class Parser(ABC):
+    """Base class for language parsers.
+
+    A parser converts source code into a tree that rules can analyze.
+    The built-in PythonParser uses ``ast.parse``. Language plugins
+    (e.g. ``sparkdoctor-scala``) provide their own parser + tree type.
+    """
+
+    language: str  # e.g. "python", "scala"
+    file_extensions: tuple[str, ...]  # e.g. (".py",), (".scala",)
+
+    @abstractmethod
+    def parse(self, source: str, filename: str = "") -> Any:
+        """Parse source code and return a tree object."""
+        ...
+
+
+class PythonParser(Parser):
+    """Built-in parser for Python source files using the ``ast`` module."""
+
+    language = "python"
+    file_extensions = (".py",)
+
+    def parse(self, source: str, filename: str = "") -> ast.AST:
+        return ast.parse(source, filename=filename)
+
+
 class Rule(ABC):
-    """Base class for all SparkDoctor lint rules."""
+    """Base class for all SparkDoctor lint rules.
+
+    Attributes:
+        rule_id: Unique identifier (e.g. "SDK001").
+        severity: How severe the finding is.
+        title: Short human-readable title.
+        category: What kind of issue this rule detects.
+        language: Which language this rule analyzes (default: "python").
+        api_version: Rule API version for plugin compatibility checking.
+    """
 
     rule_id: str
     severity: Severity
     title: str
+    category: Category = Category.PERFORMANCE
+    language: str = "python"
+    api_version: int = 1
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)

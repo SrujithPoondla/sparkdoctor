@@ -61,3 +61,27 @@ def test_non_select_method_with_star():
     source = 'df.filter("*")'
     results = check(source)
     assert results == []
+
+
+# ── False positive regression ──────────────────────────────────────────────
+
+
+def test_allows_optimus_cols_select_star():
+    """Optimus df.cols.select('*') is a column-type filter, not Spark's select."""
+    source = 'df.cols.select("*")'
+    results = check(source)
+    assert results == []
+
+
+def test_allows_sub_accessor_select():
+    """Any sub-accessor .select('*') should not fire."""
+    source = 'df.rows.select("*")'
+    results = check(source)
+    assert results == []
+
+
+def test_still_detects_chained_select_star():
+    """df.filter(cond).select('*') should still fire."""
+    source = 'df.filter(condition).select("*")'
+    results = check(source)
+    assert len(results) == 1

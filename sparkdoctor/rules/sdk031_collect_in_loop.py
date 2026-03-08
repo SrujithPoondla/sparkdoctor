@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import ast
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import is_method_call
 
 
@@ -17,6 +17,7 @@ class CollectInLoopRule(Rule):
     rule_id = "SDK031"
     severity = Severity.ERROR
     title = "collect() or toPandas() inside a loop"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "Calling collect() or toPandas() inside a loop triggers a full Spark action "

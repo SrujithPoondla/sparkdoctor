@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 
 
 class PythonUdfRule(Rule):
@@ -17,6 +17,7 @@ class PythonUdfRule(Rule):
     rule_id = "SDK005"
     severity = Severity.WARNING
     title = "Python UDF without Arrow optimization"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "Python UDFs serialize each row to Python, execute Python, then deserialize "
@@ -75,38 +76,51 @@ class PythonUdfRule(Rule):
                 diagnostics.append(self._make_diagnostic(node))
 
     def _is_plain_udf_decorator(self, node: ast.expr) -> bool:
-        """Return True if the decorator is @udf or @udf(...) but NOT @pandas_udf."""
-        # @udf
+        """Return True if the decorator is @udf or @udf(...) but NOT @pandas_udf.
+
+        Excludes UDFs with useArrow=True since Arrow-enabled UDFs avoid
+        the per-row serialization overhead.
+        """
+        # @udf (bare, no args — can't have useArrow)
         if isinstance(node, ast.Name) and node.id == "udf":
             return True
-        # @udf(returnType=...)
+        # @udf(returnType=...) or @F.udf(...)
         if isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Name) and node.func.id == "udf":
-                return True
-            # @F.udf(...)
-            if (
-                isinstance(node.func, ast.Attribute)
-                and node.func.attr == "udf"
-                and isinstance(node.func.value, ast.Name)
-            ):
-                return True
+            func = node.func
+            is_udf = (
+                (isinstance(func, ast.Name) and func.id == "udf")
+                or (
+                    isinstance(func, ast.Attribute)
+                    and func.attr == "udf"
+                    and isinstance(func.value, ast.Name)
+                )
+            )
+            if is_udf:
+                return not self._has_use_arrow(node)
         return False
 
     def _is_udf_call(self, node: ast.Call) -> bool:
         """Return True if this is a udf() or F.udf() call (not as a decorator)."""
         # Direct: udf(lambda ...)
         if isinstance(node.func, ast.Name) and node.func.id == "udf":
-            # Check it's not a decorator (decorators are handled separately)
-            # We detect standalone udf() calls — those assigned to variables
-            return True
+            return not self._has_use_arrow(node)
         # Qualified: F.udf(...) or spark.udf.register(...)
         if isinstance(node.func, ast.Attribute):
             if node.func.attr == "udf" and isinstance(node.func.value, ast.Name):
-                return True
+                return not self._has_use_arrow(node)
             if node.func.attr == "register":
                 if isinstance(node.func.value, ast.Attribute):
                     if node.func.value.attr == "udf":
-                        return True
+                        return not self._has_use_arrow(node)
+        return False
+
+    @staticmethod
+    def _has_use_arrow(node: ast.Call) -> bool:
+        """Return True if the call has useArrow=True."""
+        for kw in node.keywords:
+            if kw.arg == "useArrow" and isinstance(kw.value, ast.Constant):
+                if kw.value.value is True:
+                    return True
         return False
 
     def _make_diagnostic(self, node: ast.AST) -> Diagnostic:

@@ -63,3 +63,41 @@ df2.show(10)
 """.strip()
     results = check(source)
     assert len(results) == 2
+
+
+# ── False positive regression ──────────────────────────────────────────────
+
+
+def test_allows_matplotlib_show():
+    """plt.show() is matplotlib, not Spark."""
+    source = "plt.show()"
+    results = check(source)
+    assert results == []
+
+
+def test_allows_figure_show():
+    """fig.show() is matplotlib, not Spark."""
+    source = "fig.show()"
+    results = check(source)
+    assert results == []
+
+
+def test_allows_visualizer_show():
+    """visualizer.show() is yellowbrick/other viz libs, not Spark."""
+    source = "visualizer.show()"
+    results = check(source)
+    assert results == []
+
+
+def test_allows_viz_chain_show():
+    """ax.imshow(...).show() — visualization chain, not Spark."""
+    source = 'ax.imshow(data).show()'
+    results = check(source)
+    assert results == []
+
+
+def test_still_detects_df_show():
+    """df.show() should still fire."""
+    source = "df.show()"
+    results = check(source)
+    assert len(results) == 1

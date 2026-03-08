@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 
 
 class CountAsEmptinessCheckRule(Rule):
@@ -17,6 +17,7 @@ class CountAsEmptinessCheckRule(Rule):
     rule_id = "SDK003"
     severity = Severity.WARNING
     title = "count() used as an emptiness check"
+    category = Category.STYLE
 
     _EXPLANATION = (
         "count() forces a full scan of the entire dataset to return a single number. "
@@ -62,9 +63,15 @@ class CountAsEmptinessCheckRule(Rule):
         return False
 
     def _is_count_call(self, node: ast.expr) -> bool:
-        """Return True if this node is a .count() method call."""
+        """Return True if this node is a zero-argument .count() method call.
+
+        Python's ``list.count(value)`` takes one argument; Spark's ``df.count()``
+        takes none.  Requiring zero arguments avoids flagging list.count().
+        """
         return (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
             and node.func.attr == "count"
+            and len(node.args) == 0
+            and len(node.keywords) == 0
         )

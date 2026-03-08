@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import find_method_without_limit
 
 
@@ -18,6 +18,7 @@ class CollectWithoutLimitRule(Rule):
     rule_id = "SDK002"
     severity = Severity.WARNING
     title = "collect() without a preceding limit()"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "collect() moves the entire DataFrame to the driver. On a large dataset this "

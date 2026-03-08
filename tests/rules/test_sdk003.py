@@ -56,3 +56,20 @@ def test_detects_count_in_complex_comparison():
     source = "df.filter(condition).count() >= 1"
     results = check(source)
     assert len(results) == 1
+
+
+# ── False positive regression ──────────────────────────────────────────────
+
+
+def test_allows_list_count_with_argument():
+    """Python list.count(value) takes an argument — should not fire."""
+    source = "dtypes.count(dtypes[0]) == len(dtypes)"
+    results = check(source)
+    assert results == []
+
+
+def test_allows_string_count():
+    """str.count(sub) should not fire."""
+    source = 'text.count(",") > 3'
+    results = check(source)
+    assert results == []

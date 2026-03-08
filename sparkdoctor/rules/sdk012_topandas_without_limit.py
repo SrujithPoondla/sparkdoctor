@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import find_method_without_limit
 
 
@@ -18,6 +18,7 @@ class ToPandasWithoutLimitRule(Rule):
     rule_id = "SDK012"
     severity = Severity.ERROR
     title = "toPandas() without a preceding limit()"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "toPandas() collects ALL rows from ALL executors to the driver in a single "

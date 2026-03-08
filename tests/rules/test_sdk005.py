@@ -62,3 +62,21 @@ def my_func(x):
 """.strip()
     results = check(source)
     assert results == []
+
+
+def test_allows_udf_with_use_arrow():
+    """udf() with useArrow=True should not fire."""
+    source = "transform = udf(lambda x: x * 2, IntegerType(), useArrow=True)"
+    results = check(source)
+    assert results == []
+
+
+def test_allows_f_pandas_udf():
+    """F.pandas_udf should not fire."""
+    source = """
+@F.pandas_udf(returnType=StringType())
+def my_func(x):
+    return x.str.upper()
+""".strip()
+    results = check(source)
+    assert results == []

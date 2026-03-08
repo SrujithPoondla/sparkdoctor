@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import is_method_call
 
 
@@ -18,6 +18,7 @@ class WithColumnInLoopRule(Rule):
     rule_id = "SDK004"
     severity = Severity.ERROR
     title = "withColumn() called inside a loop"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "Every withColumn() call creates a new DataFrame and adds one projection to "

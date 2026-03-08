@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import is_method_call
 
 
@@ -18,6 +18,7 @@ class CrossJoinRule(Rule):
     rule_id = "SDK016"
     severity = Severity.WARNING
     title = "crossJoin() produces a cartesian product"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "A cross join of two tables produces N * M rows. Two 1M-row tables produce "

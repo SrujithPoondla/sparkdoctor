@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import ast
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import is_method_call
 
 
@@ -17,6 +17,7 @@ class SelectStarRule(Rule):
     rule_id = "SDK017"
     severity = Severity.WARNING
     title = "select(\"*\") reads all columns"
+    category = Category.STYLE
 
     _EXPLANATION = (
         "select('*') reads every column from the source, defeating column pruning. "
@@ -30,12 +31,19 @@ class SelectStarRule(Rule):
         "If you truly need all columns, use the DataFrame directly without select."
     )
 
+    # Sub-accessor attributes that indicate a non-Spark select call
+    # (e.g. Optimus: df.cols.select("*"), df.rows.select("*"))
+    _NON_DF_ACCESSORS = {"cols", "rows", "ml", "plot", "outliers", "encoding"}
+
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
             if not is_method_call(node, "select"):
+                continue
+            # Skip sub-accessor patterns: df.cols.select("*") is not Spark's select
+            if self._is_sub_accessor_call(node):
                 continue
             if self._has_star_arg(node):
                 diagnostics.append(
@@ -50,6 +58,14 @@ class SelectStarRule(Rule):
                     )
                 )
         return diagnostics
+
+    def _is_sub_accessor_call(self, node: ast.Call) -> bool:
+        """Return True if select is called via a sub-accessor (e.g. df.cols.select)."""
+        receiver = node.func.value
+        return (
+            isinstance(receiver, ast.Attribute)
+            and receiver.attr in self._NON_DF_ACCESSORS
+        )
 
     def _has_star_arg(self, node: ast.Call) -> bool:
         """Check if any positional argument is the literal string '*'."""

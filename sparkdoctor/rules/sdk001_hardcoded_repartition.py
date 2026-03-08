@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import find_repartition_coalesce_calls
 
 
@@ -18,6 +18,7 @@ class HardcodedRepartitionRule(Rule):
     rule_id = "SDK001"
     severity = Severity.WARNING
     title = "Hardcoded repartition count"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "Partition counts hardcoded at development time become wrong as data grows. "

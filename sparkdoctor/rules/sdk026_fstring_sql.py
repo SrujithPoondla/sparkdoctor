@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from typing import List
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 
 
 class FStringSqlRule(Rule):
@@ -17,6 +17,7 @@ class FStringSqlRule(Rule):
     rule_id = "SDK026"
     severity = Severity.WARNING
     title = "Dynamic string in spark.sql() — SQL injection risk"
+    category = Category.CORRECTNESS
 
     _EXPLANATION = (
         "Using f-strings or .format() to build SQL queries prevents Catalyst from "

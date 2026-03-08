@@ -26,11 +26,18 @@ class LintEngine:
         else:
             self.rules = all_rules
 
-    def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
-        """Run all rules and return aggregated diagnostics."""
+    def check(
+        self,
+        tree: ast.AST,
+        source_lines: list[str],
+        language: str = "python",
+    ) -> list[Diagnostic]:
+        """Run all rules for the given language and return aggregated diagnostics."""
         noqa_map = _parse_noqa_comments(source_lines)
         diagnostics: list[Diagnostic] = []
         for rule in self.rules:
+            if rule.language != language:
+                continue
             for diag in rule.check(tree, source_lines):
                 if not _is_suppressed(diag, noqa_map):
                     diagnostics.append(diag)

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import ast
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 
 
 class InferSchemaRule(Rule):
@@ -16,6 +16,7 @@ class InferSchemaRule(Rule):
     rule_id = "SDK019"
     severity = Severity.WARNING
     title = "inferSchema=True in production read"
+    category = Category.CORRECTNESS
 
     _EXPLANATION = (
         "inferSchema requires an extra pass over the entire dataset to determine "

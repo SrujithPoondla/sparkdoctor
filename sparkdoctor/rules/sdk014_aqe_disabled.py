@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import ast
 
-from sparkdoctor.lint.base import Diagnostic, Rule, Severity
+from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import find_config_set_calls
 
 
@@ -17,6 +17,7 @@ class AqeDisabledRule(Rule):
     rule_id = "SDK014"
     severity = Severity.WARNING
     title = "AQE explicitly disabled"
+    category = Category.PERFORMANCE
 
     _EXPLANATION = (
         "Adaptive Query Execution (AQE) dynamically optimizes shuffle partitions, "
