@@ -96,7 +96,7 @@ def lint(
                 "Use error, warning, or info.",
                 err=True,
             )
-            raise typer.Exit(code=2)
+            raise typer.Exit(code=2) from None
         diagnostics = [d for d in diagnostics if d.severity >= min_severity]
 
     # Render output — check entry point plugins for non-built-in formats
@@ -129,7 +129,6 @@ def lint(
 
 def _load_output_plugin(format_name: str):
     """Try to load an output renderer from the ``sparkdoctor.outputs`` entry point group."""
-    import sys
 
     if sys.version_info >= (3, 9):
         from importlib.metadata import entry_points

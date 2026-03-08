@@ -34,6 +34,7 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "black>=23.0",
+    "ruff>=0.4",
 ]
 
 [project.urls]
@@ -48,6 +49,37 @@ addopts = "-v"
 [tool.black]
 line-length = 100
 target-version = ["py39"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by black)
+    "B008",   # function call in default arg (required by typer)
+    "SIM102", # nested ifs (readability preference for AST code)
+    "SIM103", # return condition directly (readability preference)
+    "SIM108", # use ternary operator (readability preference)
+    "SIM110", # use any() instead of loop (readability preference)
+    "UP036",  # version block outdated (kept for compatibility)
+    "UP045",  # X | None syntax (typer needs Optional for Python 3.9)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/fixtures/*" = ["E402"]  # test fixtures have intentional import ordering
+
+[tool.ruff.lint.isort]
+known-first-party = ["sparkdoctor"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["sparkdoctor"]

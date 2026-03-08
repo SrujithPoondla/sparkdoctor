@@ -6,14 +6,12 @@ Severity: INFO
 from __future__ import annotations
 
 import ast
-from typing import List
 
 from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import (
     _has_pyspark_import,
     chain_contains_method,
     chain_root_name,
-    is_method_call,
     receiver_name,
 )
 
@@ -130,7 +128,7 @@ class UnpersistedCacheRule(Rule):
                             )
 
         diagnostics: list[Diagnostic] = []
-        for var_name, (method, line, col) in cached.items():
+        for var_name, (_method, line, col) in cached.items():
             if var_name not in unpersisted:
                 diagnostics.append(
                     Diagnostic(

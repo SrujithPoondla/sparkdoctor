@@ -8,7 +8,6 @@ from __future__ import annotations
 import ast
 
 from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
-from sparkdoctor.rules._helpers import is_method_call
 
 
 class CollectInLoopRule(Rule):

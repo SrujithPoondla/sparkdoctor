@@ -4,14 +4,12 @@ import ast
 from sparkdoctor.lint.base import (
     Category,
     Diagnostic,
-    Parser,
     PythonParser,
     Rule,
     Severity,
 )
 from sparkdoctor.lint.engine import LintEngine
 from sparkdoctor.rules.registry import get_all_parsers, get_all_rules
-
 
 # ── Category on rules ──────────────────────────────────────────────────────
 
@@ -127,6 +125,6 @@ def test_rule_subclass_validation():
             def check(self, tree, source_lines):
                 return []
 
-        assert False, "Should have raised TypeError"
+        raise AssertionError("Should have raised TypeError")
     except TypeError as exc:
         assert "title" in str(exc)

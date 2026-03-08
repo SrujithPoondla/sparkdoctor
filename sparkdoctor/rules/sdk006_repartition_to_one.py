@@ -6,7 +6,6 @@ Severity: ERROR
 from __future__ import annotations
 
 import ast
-from typing import List
 
 from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import find_repartition_coalesce_calls

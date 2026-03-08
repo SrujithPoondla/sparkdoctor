@@ -10,8 +10,8 @@ Every anti-pattern is commented so contributors can see what each one is.
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import StringType, IntegerType
 from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
 
 spark = SparkSession.builder.appName("UserEventPipeline").getOrCreate()
 

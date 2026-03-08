@@ -5,7 +5,6 @@ import importlib
 import logging
 import pkgutil
 import sys
-from typing import List
 
 from sparkdoctor.lint.base import Parser, PythonParser, Rule
 

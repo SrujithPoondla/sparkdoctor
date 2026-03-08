@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import fnmatch
 import logging
+from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
-from typing import Sequence
 
 from sparkdoctor.lint.base import Diagnostic, Parser
 from sparkdoctor.lint.engine import LintEngine

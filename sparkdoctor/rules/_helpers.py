@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import ast
-from typing import Iterator
+from collections.abc import Iterator
 
 
 def is_method_call(node: ast.Call, method_name: str) -> bool:

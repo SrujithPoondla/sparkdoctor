@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import ast
 import re
-from typing import List
 
 from sparkdoctor.lint.base import Diagnostic, Rule
 from sparkdoctor.rules.registry import get_all_rules

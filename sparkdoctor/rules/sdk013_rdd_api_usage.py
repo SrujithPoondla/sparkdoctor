@@ -6,7 +6,6 @@ Severity: ERROR
 from __future__ import annotations
 
 import ast
-from typing import List
 
 from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 

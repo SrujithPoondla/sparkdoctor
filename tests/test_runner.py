@@ -1,12 +1,9 @@
 """Tests for file discovery, exclude logic, and lint_file error handling."""
-import ast
 import logging
-import tempfile
 from pathlib import Path
 
 from sparkdoctor.lint.engine import LintEngine
-from sparkdoctor.lint.runner import discover_files, lint_file, _matches_any
-
+from sparkdoctor.lint.runner import _matches_any, discover_files, lint_file
 
 # ── discover_files ──────────────────────────────────────────────────────────
 

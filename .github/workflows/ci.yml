@@ -25,10 +25,14 @@ jobs:
         run: |
           pip install -e ".[dev]"
 
+      - name: Ruff check
+        run: ruff check sparkdoctor/ tests/
+
+      - name: Ruff format check
+        run: ruff format --check sparkdoctor/ tests/
+
       - name: Run tests
-        run: |
-          pytest tests/ -v
+        run: pytest tests/ -v
 
       - name: Self-lint
-        run: |
-          sparkdoctor lint sparkdoctor/ --exit-code --severity error
+        run: sparkdoctor lint sparkdoctor/ --exit-code --severity error
