@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import List
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.text import Text
 
 from sparkdoctor import __version__
 from sparkdoctor.lint.base import Diagnostic, Severity

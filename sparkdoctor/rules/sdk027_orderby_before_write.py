@@ -44,19 +44,18 @@ class OrderByBeforeWriteRule(Rule):
             if node.attr not in self._WRITE_ATTRS:
                 continue
             # Check if the receiver is a sort/orderBy call
-            if isinstance(node.value, ast.Call):
-                if self._is_sort_call(node.value):
-                    diagnostics.append(
-                        Diagnostic(
-                            rule_id=self.rule_id,
-                            severity=self.severity,
-                            message="orderBy()/sort() before write triggers a wasteful global sort",
-                            explanation=self._EXPLANATION,
-                            suggestion=self._SUGGESTION,
-                            line=node.value.lineno,
-                            col=node.value.col_offset,
-                        )
+            if isinstance(node.value, ast.Call) and self._is_sort_call(node.value):
+                diagnostics.append(
+                    Diagnostic(
+                        rule_id=self.rule_id,
+                        severity=self.severity,
+                        message="orderBy()/sort() before write triggers a wasteful global sort",
+                        explanation=self._EXPLANATION,
+                        suggestion=self._SUGGESTION,
+                        line=node.value.lineno,
+                        col=node.value.col_offset,
                     )
+                )
         return diagnostics
 
     def _is_sort_call(self, node: ast.Call) -> bool:

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import ast
-from typing import Iterator
+from collections.abc import Iterator
 
 
 def is_method_call(node: ast.Call, method_name: str) -> bool:
@@ -25,9 +25,8 @@ def first_arg_int(node: ast.Call) -> int | None:
 
 def receiver_name(node: ast.Call) -> str | None:
     """Get the receiver variable name of a method call (e.g. df.method() -> 'df')."""
-    if isinstance(node.func, ast.Attribute):
-        if isinstance(node.func.value, ast.Name):
-            return node.func.value.id
+    if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+        return node.func.value.id
     return None
 
 
@@ -79,9 +78,12 @@ def _has_pyspark_import(tree: ast.AST) -> bool:
             for alias in node.names:
                 if alias.name.split(".")[0] == "pyspark":
                     return True
-        elif isinstance(node, ast.ImportFrom):
-            if node.module and node.module.split(".")[0] == "pyspark":
-                return True
+        elif (
+            isinstance(node, ast.ImportFrom)
+            and node.module
+            and node.module.split(".")[0] == "pyspark"
+        ):
+            return True
     return False
 
 

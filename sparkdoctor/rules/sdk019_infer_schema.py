@@ -64,7 +64,10 @@ class InferSchemaRule(Rule):
     def _has_infer_schema_true(self, node: ast.Call) -> bool:
         """Check if any keyword argument is inferSchema=True."""
         for kw in node.keywords:
-            if kw.arg == "inferSchema" and isinstance(kw.value, ast.Constant):
-                if kw.value.value is True:
-                    return True
+            if (
+                kw.arg == "inferSchema"
+                and isinstance(kw.value, ast.Constant)
+                and kw.value.value is True
+            ):
+                return True
         return False

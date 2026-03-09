@@ -69,7 +69,4 @@ class SelectStarRule(Rule):
 
     def _has_star_arg(self, node: ast.Call) -> bool:
         """Check if any positional argument is the literal string '*'."""
-        for arg in node.args:
-            if isinstance(arg, ast.Constant) and arg.value == "*":
-                return True
-        return False
+        return any(isinstance(arg, ast.Constant) and arg.value == "*" for arg in node.args)

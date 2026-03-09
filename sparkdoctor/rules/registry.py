@@ -4,8 +4,6 @@ from __future__ import annotations
 import importlib
 import logging
 import pkgutil
-import sys
-from typing import List
 
 from sparkdoctor.lint.base import Parser, PythonParser, Rule
 
@@ -98,16 +96,7 @@ def _collect_rules_from_module(
 
 
 def _iter_entry_points(group: str):
-    """Yield entry points for a group, compatible with Python 3.9+."""
-    if sys.version_info >= (3, 12):
-        from importlib.metadata import entry_points
-        return entry_points(group=group)
-    elif sys.version_info >= (3, 9):
-        from importlib.metadata import entry_points
-        # Python 3.9-3.11: entry_points() returns a dict
-        eps = entry_points()
-        if isinstance(eps, dict):
-            return eps.get(group, [])
-        # Python 3.10+ may support the keyword arg
-        return entry_points(group=group)
-    return []
+    """Yield entry points for a group."""
+    from importlib.metadata import entry_points
+
+    return entry_points(group=group)

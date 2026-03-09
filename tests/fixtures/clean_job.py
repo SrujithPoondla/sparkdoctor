@@ -8,11 +8,11 @@ This demonstrates the correct alternative for every anti-pattern
 in bad_job.py.
 """
 
+import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.functions import pandas_udf
 from pyspark.sql.types import StringType
-import pandas as pd
 
 spark = SparkSession.builder.appName("UserEventPipeline").getOrCreate()
 
@@ -131,6 +131,7 @@ categorized = events.join(categories, on="category_id", how="inner")
 
 # ── Correct: no show() in production — use logging ──────────────────────────
 import logging
+
 logger = logging.getLogger(__name__)
 logger.info("Pipeline complete")
 
@@ -158,7 +159,8 @@ for row in country_data:
 
 
 # ── Correct: explicit schema instead of inferSchema ──────────────────────────
-from pyspark.sql.types import StructType, StructField, IntegerType
+from pyspark.sql.types import IntegerType, StructField, StructType
+
 csv_schema = StructType([
     StructField("id", IntegerType()),
     StructField("name", StringType()),

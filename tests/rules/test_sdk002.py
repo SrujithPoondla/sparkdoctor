@@ -65,7 +65,11 @@ def test_allows_rdd_collect():
 
 def test_allows_rdd_textfile_collect():
     """RDD .collect() via textFile should not fire."""
-    source = _PYSPARK_IMPORT + 'rdd = sc.textFile("data.txt").flatMap(lambda x: x.split(" ")).collect()'
+    source = (
+        _PYSPARK_IMPORT
+        + 'rdd = sc.textFile("data.txt")'
+        + '.flatMap(lambda x: x.split(" ")).collect()'
+    )
     results = check(source)
     assert results == []
 

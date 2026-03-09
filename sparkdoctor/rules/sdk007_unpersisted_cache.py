@@ -6,14 +6,11 @@ Severity: INFO
 from __future__ import annotations
 
 import ast
-from typing import List
 
 from sparkdoctor.lint.base import Category, Diagnostic, Rule, Severity
 from sparkdoctor.rules._helpers import (
     _has_pyspark_import,
     chain_contains_method,
-    chain_root_name,
-    is_method_call,
     receiver_name,
 )
 
@@ -67,23 +64,19 @@ class UnpersistedCacheRule(Rule):
         if not _has_pyspark_import(tree):
             return []
 
-        # First pass: build a map of variable -> assigned-from-chain-root
-        # Skip cache/persist assignments since those just wrap the original object.
-        var_origins: dict[str, str | None] = {}
         # Track which (line, col) come from assignment RHS — avoid double-counting
         assigned_cache_locations: set[tuple[int, int]] = set()
         for node in ast.walk(tree):
-            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
-                if isinstance(node.value.func, ast.Attribute):
-                    if node.value.func.attr in self._CACHE_METHODS:
-                        assigned_cache_locations.add(
-                            (node.value.lineno, node.value.col_offset)
-                        )
-                        continue
-                root = chain_root_name(node.value)
-                for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id not in var_origins:
-                        var_origins[target.id] = root
+            if (
+                isinstance(node, ast.Assign)
+                and isinstance(node.value, ast.Call)
+                and isinstance(node.value.func, ast.Attribute)
+                and node.value.func.attr in self._CACHE_METHODS
+            ):
+                assigned_cache_locations.add(
+                    (node.value.lineno, node.value.col_offset)
+                )
+                continue
 
         # Track: variable_name -> (cache_method, line, col)
         cached: dict[str, tuple[str, int, int]] = {}
@@ -108,29 +101,32 @@ class UnpersistedCacheRule(Rule):
                     unpersisted.add(name)
 
             # Handle assignment: result = df.cache()
-            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
-                if isinstance(node.value.func, ast.Attribute):
-                    if node.value.func.attr in self._CACHE_METHODS:
-                        assign_recv = receiver_name(node.value)
-                        if self._is_non_spark(node.value):
-                            continue
-                        # Track both the assignment target and the receiver
-                        for target in node.targets:
-                            if isinstance(target, ast.Name):
-                                cached[target.id] = (
-                                    node.value.func.attr,
-                                    node.value.lineno,
-                                    node.value.col_offset,
-                                )
-                        if assign_recv:
-                            cached[assign_recv] = (
-                                node.value.func.attr,
-                                node.value.lineno,
-                                node.value.col_offset,
-                            )
+            if (
+                isinstance(node, ast.Assign)
+                and isinstance(node.value, ast.Call)
+                and isinstance(node.value.func, ast.Attribute)
+                and node.value.func.attr in self._CACHE_METHODS
+            ):
+                assign_recv = receiver_name(node.value)
+                if self._is_non_spark(node.value):
+                    continue
+                # Track both the assignment target and the receiver
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        cached[target.id] = (
+                            node.value.func.attr,
+                            node.value.lineno,
+                            node.value.col_offset,
+                        )
+                if assign_recv:
+                    cached[assign_recv] = (
+                        node.value.func.attr,
+                        node.value.lineno,
+                        node.value.col_offset,
+                    )
 
         diagnostics: list[Diagnostic] = []
-        for var_name, (method, line, col) in cached.items():
+        for var_name, (_method, line, col) in cached.items():
             if var_name not in unpersisted:
                 diagnostics.append(
                     Diagnostic(
@@ -155,7 +151,5 @@ class UnpersistedCacheRule(Rule):
         """
         if chain_contains_method(node, self._TF_CHAIN_METHODS):
             return True
-        if chain_contains_method(node, self._RDD_CHAIN_METHODS):
-            return True
-        return False
+        return chain_contains_method(node, self._RDD_CHAIN_METHODS)
 

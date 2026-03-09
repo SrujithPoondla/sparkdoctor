@@ -1,7 +1,6 @@
 """Tests for pyproject.toml configuration loading."""
-from pathlib import Path
 
-from sparkdoctor.config import SparkDoctorConfig, load_config, _find_pyproject
+from sparkdoctor.config import SparkDoctorConfig, _find_pyproject, load_config
 
 
 def test_empty_config():

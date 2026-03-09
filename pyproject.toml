@@ -8,17 +8,17 @@ version = "0.1.7"
 description = "A Spark performance linter"
 readme = "README.md"
 license = { text = "Apache-2.0" }
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["pyspark", "spark", "linter", "performance", "data-engineering"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = [
@@ -33,7 +33,7 @@ sparkdoctor = "sparkdoctor.cli.main:app"
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    "black>=23.0",
+    "ruff>=0.4",
 ]
 
 [project.urls]
@@ -45,9 +45,30 @@ Issues = "https://github.com/SrujithPoondla/sparkdoctor/issues"
 testpaths = ["tests"]
 addopts = "-v"
 
-[tool.black]
+[tool.ruff]
+target-version = "py310"
 line-length = 100
-target-version = ["py39"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "B008",   # function call in default arg (required by typer)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"sparkdoctor/cli/main.py" = ["UP045"]  # typer evaluates type hints at runtime
+"tests/fixtures/*" = ["E402"]  # test fixtures have intentional import ordering
+
+[tool.ruff.lint.isort]
+known-first-party = ["sparkdoctor"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["sparkdoctor"]
