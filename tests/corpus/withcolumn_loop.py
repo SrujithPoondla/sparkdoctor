@@ -15,5 +15,8 @@ while i < 3:  # expect: SDK004
     df = df.withColumn(f"col_{i}", F.lit(i))
     i += 1
 
+# withColumn outside a loop — fine
+df = df.withColumn("new_col", F.lit(1))  # expect: none
+
 # Correct: use select once (select("*") triggers SDK017 — that's expected)
 df = df.select("*", *[F.lit(0).alias(c) for c in columns])  # expect: SDK017

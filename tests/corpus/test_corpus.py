@@ -8,6 +8,7 @@ Each .py file in tests/corpus/ is a self-contained PySpark snippet with
 from __future__ import annotations
 
 import ast
+from collections import defaultdict
 from pathlib import Path
 
 import pytest
@@ -85,3 +86,82 @@ def test_corpus_files():
         for filename, failures in file_failures.items():
             msg += f"\n{filename}:\n" + "\n".join(failures)
         raise AssertionError(msg)
+
+
+def _count_corpus_coverage(
+    corpus_files: list[Path],
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Count positive and negative corpus annotations per rule.
+
+    Returns:
+        positives: rule_id -> count of ``# expect: SDKXXX`` lines
+        negatives: rule_id -> count of ``# expect: none`` lines in files
+                   that also have positive annotations for that rule
+    """
+    positives: dict[str, int] = defaultdict(int)
+    negatives: dict[str, int] = defaultdict(int)
+
+    for path in corpus_files:
+        source_lines = path.read_text().splitlines()
+        expectations = parse_expectations(source_lines)
+
+        # First pass: collect which rules have positives in this file
+        file_positive_rules: set[str] = set()
+        has_none = False
+        for ids in expectations.values():
+            if ids:
+                file_positive_rules |= ids
+                for rule_id in ids:
+                    positives[rule_id] += 1
+            else:
+                has_none = True
+
+        # A file's ``# expect: none`` lines count as negatives for each
+        # rule that also has positive annotations in the same file.
+        if has_none:
+            none_count = sum(1 for ids in expectations.values() if not ids)
+            for rule_id in file_positive_rules:
+                negatives[rule_id] += none_count
+
+    return positives, negatives
+
+
+# Minimum corpus annotations required per rule
+_MIN_POSITIVES = 1
+_MIN_NEGATIVES = 1
+
+
+def _get_builtin_rule_ids() -> set[str]:
+    """Return rule IDs for built-in rules only (excludes entry-point plugins)."""
+    return {
+        r.rule_id for r in _ENGINE.rules
+        if r.__class__.__module__.startswith("sparkdoctor.rules.")
+    }
+
+
+def test_all_rules_have_corpus_coverage():
+    """Every built-in rule must have both positive and negative corpus annotations."""
+    corpus_files = collect_corpus_files()
+    all_rule_ids = _get_builtin_rule_ids()
+    positives, negatives = _count_corpus_coverage(corpus_files)
+
+    failures: list[str] = []
+    for rule_id in sorted(all_rule_ids):
+        p = positives.get(rule_id, 0)
+        n = negatives.get(rule_id, 0)
+        issues = []
+        if p < _MIN_POSITIVES:
+            issues.append(f"{p} positives (need {_MIN_POSITIVES}+)")
+        if n < _MIN_NEGATIVES:
+            issues.append(f"{n} negatives (need {_MIN_NEGATIVES}+)")
+        if issues:
+            failures.append(f"  {rule_id}: {', '.join(issues)}")
+
+    if failures:
+        raise AssertionError(
+            "Rules with insufficient corpus coverage:\n"
+            + "\n".join(failures)
+            + "\n\nAdd a corpus file in tests/corpus/ with both "
+            "'# expect: SDKXXX' and '# expect: none' annotations.\n"
+            "For accurate negative counting, use single-rule corpus files."
+        )
