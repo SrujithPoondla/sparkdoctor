@@ -10,7 +10,9 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from tests.corpus.conftest import _ENGINE, _parse_expectations
+import pytest
+
+from tests.corpus.conftest import _ENGINE, collect_corpus_files, parse_expectations
 
 
 def _run_and_check(path: Path) -> list[str]:
@@ -25,7 +27,7 @@ def _run_and_check(path: Path) -> list[str]:
     for diag in diagnostics:
         actual.setdefault(diag.line, set()).add(diag.rule_id)
 
-    expected = _parse_expectations(source_lines)
+    expected = parse_expectations(source_lines)
     failures: list[str] = []
 
     for line_no, expected_ids in expected.items():
@@ -66,14 +68,10 @@ def _run_and_check(path: Path) -> list[str]:
 
 def test_corpus_files():
     """Run all corpus files and report all failures together."""
-    corpus_dir = Path(__file__).parent
-    skip = {"conftest.py", "__init__.py", "test_corpus.py"}
-    corpus_files = sorted(
-        p for p in corpus_dir.glob("*.py") if p.name not in skip
-    )
+    corpus_files = collect_corpus_files()
 
     if not corpus_files:
-        return  # No corpus files yet — nothing to test
+        pytest.skip("No corpus files found in tests/corpus/")
 
     all_failures: list[str] = []
     for path in corpus_files:
