@@ -8,6 +8,7 @@ Each .py file in tests/corpus/ is a self-contained PySpark snippet with
 from __future__ import annotations
 
 import ast
+from collections import defaultdict
 from pathlib import Path
 
 import pytest
@@ -98,8 +99,8 @@ def _count_corpus_coverage(
         negatives: rule_id -> count of ``# expect: none`` lines in files
                    that also test that rule
     """
-    positives: dict[str, int] = {}
-    negatives: dict[str, int] = {}
+    positives: dict[str, int] = defaultdict(int)
+    negatives: dict[str, int] = defaultdict(int)
 
     for path in corpus_files:
         source_lines = path.read_text().splitlines()
@@ -111,12 +112,12 @@ def _count_corpus_coverage(
             if ids:
                 file_rules |= ids
                 for rule_id in ids:
-                    positives[rule_id] = positives.get(rule_id, 0) + 1
+                    positives[rule_id] += 1
             else:
                 none_count += 1
 
         for rule_id in file_rules:
-            negatives[rule_id] = negatives.get(rule_id, 0) + none_count
+            negatives[rule_id] += none_count
 
     return positives, negatives
 
