@@ -66,6 +66,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "sparkdoctor/cli/main.py" = ["UP045"]  # typer evaluates type hints at runtime
 "tests/fixtures/*" = ["E402"]  # test fixtures have intentional import ordering
+"tests/corpus/*" = ["E402", "F401", "I001", "B007"]  # corpus files are realistic PySpark snippets
 
 [tool.ruff.lint.isort]
 known-first-party = ["sparkdoctor"]
