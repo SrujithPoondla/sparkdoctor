@@ -1,6 +1,8 @@
 """Tests for SDK008 — Cross-DataFrame column reference."""
 import ast
 
+import pytest
+
 from sparkdoctor.rules.sdk008_cross_df_column_ref import CrossDataFrameColumnRefRule
 
 RULE = CrossDataFrameColumnRefRule()
@@ -91,3 +93,20 @@ def test_cross_df_in_withcolumn():
     )
     results = check(source)
     assert len(results) == 1
+
+
+@pytest.mark.parametrize("method,call", [
+    ("where", "df2.where(df1.active)"),
+    ("drop", "df2.drop(df1.col)"),
+    ("groupBy", "df2.groupBy(df1.category)"),
+    ("orderBy", "df2.orderBy(df1.timestamp)"),
+])
+def test_cross_df_in_other_methods(method, call):
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        f"result = {call}\n"
+    )
+    results = check(source)
+    assert len(results) == 1
+    assert results[0].rule_id == "SDK008"

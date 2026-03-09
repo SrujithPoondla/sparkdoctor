@@ -54,7 +54,10 @@ class CrossDataFrameColumnRefRule(Rule):
             if node.func.attr not in self._TARGET_METHODS:
                 continue
 
-            # Get the receiver DF name
+            # Get the receiver DF name — only handles simple Name receivers.
+            # Chained calls like df2.filter(...).select(df1.col) are skipped
+            # because the receiver is a Call node, not a Name. This is
+            # conservative to avoid false positives.
             receiver = node.func.value
             if not isinstance(receiver, ast.Name):
                 continue
@@ -82,7 +85,13 @@ class CrossDataFrameColumnRefRule(Rule):
         return diagnostics
 
     def _find_df_variables(self, tree: ast.AST) -> set[str]:
-        """Find variable names likely holding DataFrames."""
+        """Find variable names likely holding DataFrames.
+
+        Detects assignments of the form ``var = obj.method(...)``, which covers
+        patterns like ``spark.read.parquet()`` and ``df.filter()``.  Does not
+        detect plain function calls (``df = load()``), tuple unpacking, or
+        function parameters — intentionally conservative to reduce false positives.
+        """
         df_vars: set[str] = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
