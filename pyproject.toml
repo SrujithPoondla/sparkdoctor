@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "sparkdoctor"
 version = "0.1.7"
-description = "A Spark performance linter"
+description = "A Spark quality linter — catches performance, correctness, and style issues before they reach your cluster"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
