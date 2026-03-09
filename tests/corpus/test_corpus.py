@@ -73,16 +73,15 @@ def test_corpus_files():
     if not corpus_files:
         pytest.skip("No corpus files found in tests/corpus/")
 
-    all_failures: list[str] = []
+    file_failures: dict[str, list[str]] = {}
     for path in corpus_files:
         failures = _run_and_check(path)
         if failures:
-            all_failures.append(f"\n{path.name}:")
-            all_failures.extend(failures)
+            file_failures[path.name] = failures
 
-    if all_failures:
-        file_count = sum(1 for f in all_failures if f.startswith("\n"))
-        issue_count = len(all_failures) - file_count
+    if file_failures:
+        issue_count = sum(len(f) for f in file_failures.values())
         msg = f"Corpus test failures ({issue_count} issues):\n"
-        msg += "\n".join(all_failures)
+        for filename, failures in file_failures.items():
+            msg += f"\n{filename}:\n" + "\n".join(failures)
         raise AssertionError(msg)
