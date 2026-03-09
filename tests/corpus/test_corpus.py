@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from sparkdoctor.rules.registry import get_all_rules
 from tests.corpus.conftest import _ENGINE, collect_corpus_files, parse_expectations
 
 
@@ -85,3 +86,68 @@ def test_corpus_files():
         for filename, failures in file_failures.items():
             msg += f"\n{filename}:\n" + "\n".join(failures)
         raise AssertionError(msg)
+
+
+def _count_corpus_coverage(
+    corpus_files: list[Path],
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Count positive and negative corpus annotations per rule.
+
+    Returns:
+        positives: rule_id -> count of ``# expect: SDKXXX`` lines
+        negatives: rule_id -> count of ``# expect: none`` lines in files
+                   that also test that rule
+    """
+    positives: dict[str, int] = {}
+    negatives: dict[str, int] = {}
+
+    for path in corpus_files:
+        source_lines = path.read_text().splitlines()
+        expectations = parse_expectations(source_lines)
+
+        file_rules: set[str] = set()
+        none_count = 0
+        for ids in expectations.values():
+            if ids:
+                file_rules |= ids
+                for rule_id in ids:
+                    positives[rule_id] = positives.get(rule_id, 0) + 1
+            else:
+                none_count += 1
+
+        for rule_id in file_rules:
+            negatives[rule_id] = negatives.get(rule_id, 0) + none_count
+
+    return positives, negatives
+
+
+# Minimum corpus annotations required per rule
+_MIN_POSITIVES = 1
+_MIN_NEGATIVES = 1
+
+
+def test_all_rules_have_corpus_coverage():
+    """Every rule must have both positive and negative corpus annotations."""
+    corpus_files = collect_corpus_files()
+    all_rule_ids = {r.rule_id for r in get_all_rules()}
+    positives, negatives = _count_corpus_coverage(corpus_files)
+
+    failures: list[str] = []
+    for rule_id in sorted(all_rule_ids):
+        p = positives.get(rule_id, 0)
+        n = negatives.get(rule_id, 0)
+        issues = []
+        if p < _MIN_POSITIVES:
+            issues.append(f"{p} positives (need {_MIN_POSITIVES}+)")
+        if n < _MIN_NEGATIVES:
+            issues.append(f"{n} negatives (need {_MIN_NEGATIVES}+)")
+        if issues:
+            failures.append(f"  {rule_id}: {', '.join(issues)}")
+
+    if failures:
+        raise AssertionError(
+            "Rules with insufficient corpus coverage:\n"
+            + "\n".join(failures)
+            + "\n\nAdd corpus files in tests/corpus/ with "
+            "'# expect: SDKXXX' and '# expect: none' annotations."
+        )
