@@ -103,9 +103,12 @@ class DropBeforeOverwriteRule(Rule):
         return False
 
     def _is_fs_rm(self, node: ast.Call) -> bool:
+        """Check for dbutils.fs.rm() — verifies full chain."""
         if not isinstance(node.func, ast.Attribute):
             return False
         if node.func.attr != "rm":
             return False
         receiver = node.func.value
-        return isinstance(receiver, ast.Attribute) and receiver.attr == "fs"
+        if not (isinstance(receiver, ast.Attribute) and receiver.attr == "fs"):
+            return False
+        return isinstance(receiver.value, ast.Name) and receiver.value.id == "dbutils"

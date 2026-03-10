@@ -79,6 +79,18 @@ def test_drop_far_from_overwrite():
     assert results == []
 
 
+def test_drop_exactly_20_lines_before_overwrite():
+    """Distance of exactly 20 lines should still trigger."""
+    lines = [_PYSPARK]
+    lines.append('spark.sql("DROP TABLE IF EXISTS my_table")\n')  # line 2
+    for i in range(18):  # lines 3-20
+        lines.append(f"x_{i} = {i}\n")
+    lines.append('df.write.mode("overwrite").save(path)\n')  # line 21, distance=19
+    source = "".join(lines)
+    results = check(source)
+    assert len(results) == 1
+
+
 def test_append_mode_not_flagged():
     source = _PYSPARK + (
         'spark.sql("DROP TABLE IF EXISTS my_table")\n'
