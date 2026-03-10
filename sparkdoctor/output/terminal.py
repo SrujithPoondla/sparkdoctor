@@ -26,6 +26,7 @@ def render(
     diagnostics: list[Diagnostic],
     file_count: int,
     console: Console | None = None,
+    verbose: bool = False,
 ) -> None:
     """Render diagnostics to the terminal using Rich."""
     if console is None:
@@ -55,8 +56,9 @@ def render(
                 f"[dim]{d.rule_id}[/dim]  "
                 f"{d.message}"
             )
-            console.print(f"     {d.explanation}")
-            console.print(f"     [green]Fix:[/green] {d.suggestion}")
+            if verbose:
+                console.print(f"     {d.explanation}")
+                console.print(f"     [green]Fix:[/green] {d.suggestion}")
             console.print()
 
     # Summary
