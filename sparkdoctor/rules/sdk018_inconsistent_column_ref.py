@@ -33,36 +33,75 @@ class InconsistentColumnRefRule(Rule):
         '  df.select("name", "age")                 # consistent string'
     )
 
+    # DataFrame methods — used to identify DF variables and attribute access context.
     _DF_METHODS = {
         "select", "filter", "where", "withColumn", "groupBy",
-        "orderBy", "sort", "agg", "drop", "join",
+        "orderBy", "sort", "agg", "drop", "join", "union", "unionAll",
+        "crossJoin", "limit", "distinct", "dropDuplicates",
+        "withColumnRenamed", "alias", "toDF",
     }
+
+    # Attributes that are NOT column access on a DataFrame.
+    _NON_COLUMN_ATTRS = {
+        "columns", "schema", "dtypes", "rdd", "write", "writeStream",
+        "read", "readStream", "sql", "conf", "sparkContext", "udf",
+        "cache", "persist", "unpersist", "count", "collect",
+        "show", "head", "first", "take", "toPandas",
+        "alias", "asc", "desc", "cast",
+        "otherwise", "over", "between", "isin",
+        "isNull", "isNotNull", "na", "stat",
+        "explain", "printSchema", "describe", "summary",
+        "createOrReplaceTempView", "createTempView",
+    } | _DF_METHODS
 
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         if not _has_pyspark_import(tree):
             return []
 
+        # Step 1: Resolve functions module aliases from imports.
+        func_aliases = self._find_functions_aliases(tree)
+        has_bare_col = self._has_bare_col_import(tree)
+
+        # Step 2: Find DataFrame variable names (assigned from DF method chains).
+        df_vars = self._find_df_variables(tree)
+
+        # Step 3: Scan entire file for column reference styles.
         styles: dict[str, list[int]] = {}
 
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            if not isinstance(node.func, ast.Attribute):
-                continue
-
-            if node.func.attr == "col":
-                receiver = node.func.value
-                if isinstance(receiver, ast.Name) and receiver.id in ("F", "functions"):
+            # F.col() / functions.col() / sf.col() / bare col()
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute) and node.func.attr == "col":
+                    receiver = node.func.value
+                    if isinstance(receiver, ast.Name) and receiver.id in func_aliases:
+                        styles.setdefault("F.col()", []).append(node.lineno)
+                elif (
+                    has_bare_col
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id == "col"
+                ):
                     styles.setdefault("F.col()", []).append(node.lineno)
-                continue
 
-            if node.func.attr not in self._DF_METHODS:
-                continue
+            # df["col"] — only on known DataFrame variables
+            if (
+                isinstance(node, ast.Subscript)
+                and isinstance(node.value, ast.Name)
+                and node.value.id in df_vars
+                and isinstance(node.slice, ast.Constant)
+                and isinstance(node.slice.value, str)
+            ):
+                styles.setdefault('df["col"]', []).append(node.lineno)
 
-            for arg in node.args:
-                self._detect_styles_in_expr(arg, styles)
-            for kw in node.keywords:
-                self._detect_styles_in_expr(kw.value, styles)
+            # df.col — attribute access on known DataFrame variables
+            if (
+                isinstance(node, ast.Attribute)
+                and isinstance(node.value, ast.Name)
+                and node.value.id in df_vars
+                and node.attr not in self._NON_COLUMN_ATTRS
+            ):
+                # Exclude if this attribute is itself a call target (df.select())
+                # We can't detect parent in ast.walk, so we rely on the exclusion set
+                styles.setdefault("df.col", []).append(node.lineno)
 
         if len(styles) < 2:
             return []
@@ -83,24 +122,86 @@ class InconsistentColumnRefRule(Rule):
             )
         ]
 
-    def _detect_styles_in_expr(self, node: ast.AST, styles: dict[str, list[int]]) -> None:
-        for child in ast.walk(node):
-            if isinstance(child, ast.Subscript):
-                if isinstance(child.slice, ast.Constant) and isinstance(
-                    child.slice.value, str
-                ):
-                    styles.setdefault('df["col"]', []).append(child.lineno)
-            elif (
-                isinstance(child, ast.Attribute)
-                and isinstance(child.value, ast.Name)
-                and child.attr not in self._DF_METHODS
-                and child.attr not in {
-                    "col", "columns", "schema", "dtypes", "rdd", "write",
-                    "read", "sql", "conf", "sparkContext", "udf",
-                    "cache", "persist", "unpersist", "count", "collect",
-                    "show", "head", "first", "take", "toPandas",
-                    "limit", "alias", "asc", "desc", "cast",
-                    "otherwise", "over", "between", "isin",
-                }
+    def _find_functions_aliases(self, tree: ast.AST) -> set[str]:
+        """Find all aliases for pyspark.sql.functions (e.g. F, sf, functions)."""
+        aliases: set[str] = set()
+        for node in ast.walk(tree):
+            # import pyspark.sql.functions as F
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "pyspark.sql.functions":
+                        aliases.add(alias.asname or "functions")
+            # from pyspark.sql import functions as F
+            elif isinstance(node, ast.ImportFrom) and node.module == "pyspark.sql":
+                for alias in node.names:
+                    if alias.name == "functions":
+                        aliases.add(alias.asname or "functions")
+        return aliases
+
+    def _has_bare_col_import(self, tree: ast.AST) -> bool:
+        """Check if `col` is directly imported (from pyspark.sql.functions import col)."""
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.ImportFrom)
+                and node.module
+                and node.module in ("pyspark.sql.functions", "pyspark.sql")
             ):
-                styles.setdefault("df.col", []).append(child.lineno)
+                for alias in node.names:
+                    if alias.name == "col":
+                        return True
+        return False
+
+    def _find_df_variables(self, tree: ast.AST) -> set[str]:
+        """Find variable names that are likely DataFrames.
+
+        Tracks names assigned from:
+        - spark.read / spark.readStream chains
+        - DataFrame method calls (.filter(), .select(), etc.)
+        - spark.createDataFrame() / spark.table() / spark.sql()
+        """
+        df_vars: set[str] = set()
+        # Common conventional names
+        df_vars.add("df")
+
+        spark_creators = {"read", "readStream", "createDataFrame", "table", "sql", "range"}
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign):
+                continue
+            if not isinstance(node.value, ast.Call):
+                continue
+
+            # Check if RHS is a DF method chain
+            call = node.value
+            if isinstance(call.func, ast.Attribute):
+                method = call.func.attr
+                if method in self._DF_METHODS or method in spark_creators:
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            df_vars.add(target.id)
+                    continue
+
+                # Check receiver chain for DF methods (e.g. spark.read.csv())
+                if self._chain_has_df_method(call):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            df_vars.add(target.id)
+
+        return df_vars
+
+    def _chain_has_df_method(self, node: ast.AST) -> bool:
+        """Check if a call chain contains any DataFrame method."""
+        current = node
+        spark_creators = {"read", "readStream", "createDataFrame", "table", "sql", "range"}
+        all_methods = self._DF_METHODS | spark_creators
+        while True:
+            if isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute):
+                if current.func.attr in all_methods:
+                    return True
+                current = current.func.value
+            elif isinstance(current, ast.Attribute):
+                if current.attr in all_methods:
+                    return True
+                current = current.value
+            else:
+                return False

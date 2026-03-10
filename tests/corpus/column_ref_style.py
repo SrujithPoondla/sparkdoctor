@@ -10,3 +10,7 @@ mixed = df.select(F.col("name"), df["age"])  # expect: SDK018
 
 # Consistent F.col — should not trigger
 consistent = df.select(F.col("name"), F.col("age"))  # expect: none
+
+# config subscript should not count as df["col"]
+config = {"key": "value"}
+x = config["key"]  # expect: none
