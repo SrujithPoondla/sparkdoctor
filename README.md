@@ -1,6 +1,6 @@
 # SparkDoctor
 
-**A Spark quality linter. Catches performance anti-patterns, correctness bugs, and style issues before they reach your cluster.**
+**A Spark linter — catches performance, correctness, and style issues before they reach your cluster.**
 
 ```
 pip install sparkdoctor

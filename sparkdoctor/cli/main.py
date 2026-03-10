@@ -12,7 +12,10 @@ from sparkdoctor.lint.base import Severity
 
 app = typer.Typer(
     name="sparkdoctor",
-    help="A Spark performance linter.",
+    help=(
+        "A Spark linter — catches performance, correctness,"
+        " and style issues before they reach your cluster."
+    ),
     add_completion=False,
     invoke_without_command=True,
 )
@@ -20,7 +23,7 @@ app = typer.Typer(
 
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context) -> None:
-    """A Spark performance linter."""
+    """A Spark linter — catches performance, correctness, and style issues."""
     if ctx.invoked_subcommand is None and not ctx.args:
         typer.echo(ctx.get_help())
         raise typer.Exit()
@@ -54,12 +57,16 @@ def lint(
         None, "--disable", "-d",
         help="Rule IDs to disable (e.g. 'SDK023' or 'SDK002')"
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v",
+        help="Show explanation and fix suggestion for each finding (terminal only)"
+    ),
     no_config: bool = typer.Option(
         False, "--no-config",
         help="Ignore pyproject.toml [tool.sparkdoctor] configuration"
     ),
 ) -> None:
-    """Lint PySpark files for performance anti-patterns."""
+    """Lint PySpark files for quality issues."""
     from sparkdoctor.config import load_config
     from sparkdoctor.lint.runner import run
 
@@ -108,7 +115,7 @@ def lint(
         from sparkdoctor.output.terminal import render
 
         console = Console(no_color=no_color)
-        render(diagnostics, file_count, console=console)
+        render(diagnostics, file_count, console=console, verbose=verbose)
     else:
         # Try entry point output plugins
         renderer = _load_output_plugin(format_name)
