@@ -59,7 +59,7 @@ def render(
             if verbose:
                 console.print(f"     {d.explanation}")
                 console.print(f"     [green]Fix:[/green] {d.suggestion}")
-            console.print()
+                console.print()
 
     # Summary
     error_count = sum(1 for d in diagnostics if d.severity == Severity.ERROR)

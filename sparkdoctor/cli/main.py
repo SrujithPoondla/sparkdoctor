@@ -59,7 +59,7 @@ def lint(
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v",
-        help="Show explanation and fix suggestion for each finding"
+        help="Show explanation and fix suggestion for each finding (terminal only)"
     ),
     no_config: bool = typer.Option(
         False, "--no-config",
