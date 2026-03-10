@@ -72,3 +72,9 @@ def test_multiple_magic_literals_same_filter():
     results = check(source)
     assert any("active" in r.message for r in results)
     assert any("5" in r.message for r in results)
+
+
+def test_keyword_argument():
+    source = _PYSPARK + 'df.filter(condition=F.col("status") == "active")\n'
+    results = check(source)
+    assert any(r.rule_id == "SDK011" and "active" in r.message for r in results)

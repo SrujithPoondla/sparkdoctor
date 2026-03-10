@@ -56,7 +56,8 @@ class MagicLiteralRule(Rule):
 
             col_ref_ids = self._collect_col_ref_args(node)
 
-            for arg in node.args:
+            all_args = list(node.args) + [kw.value for kw in node.keywords]
+            for arg in all_args:
                 for const in self._find_magic_constants(arg, col_ref_ids):
                     key = (const.lineno, const.col_offset)
                     if key in seen:
