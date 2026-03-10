@@ -72,3 +72,12 @@ def test_no_duplicate_for_same_chain():
     )
     results = check(source)
     assert len(results) == 1
+
+
+def test_nested_chains_detected_independently():
+    """Two independent long chains — one as argument to the other."""
+    source = _PYSPARK + (
+        "result = df.a().b().c().d().e().f(other.x().y().z().w().v().u())\n"
+    )
+    results = check(source)
+    assert len(results) == 2

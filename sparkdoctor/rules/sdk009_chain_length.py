@@ -38,8 +38,9 @@ class ChainLengthRule(Rule):
         if not _has_pyspark_import(tree):
             return []
 
-        diagnostics: list[Diagnostic] = []
-        seen_chains: set[int] = set()
+        # Collect all candidates, then keep max depth per root to handle
+        # ast.walk's unspecified traversal order.
+        candidates: dict[int, tuple[int, ast.AST]] = {}  # root_id -> (depth, node)
 
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
@@ -52,10 +53,12 @@ class ChainLengthRule(Rule):
                 continue
 
             root_id = self._root_node_id(node)
-            if root_id in seen_chains:
-                continue
-            seen_chains.add(root_id)
+            prev = candidates.get(root_id)
+            if prev is None or depth > prev[0]:
+                candidates[root_id] = (depth, node)
 
+        diagnostics: list[Diagnostic] = []
+        for depth, node in candidates.values():
             diagnostics.append(
                 Diagnostic(
                     rule_id=self.rule_id,
