@@ -1,0 +1,13 @@
+rule_id: SDK023
+title: "show() left in production code"
+severity: info
+category: style
+languages: [python, scala, java]
+explanation: >-
+  Each .show() call triggers a Spark action — a full job execution that materializes the DataFrame and pulls rows to the driver. A pipeline with multiple show() calls left in production runs extra jobs before the actual work begins, wasting compute and adding latency.
+suggestion: >-
+  Remove .show() calls from production code, or suppress with # noqa: SDK023 if intentional. For logging, use:
+
+  import logging
+  logger = logging.getLogger(__name__)
+  logger.info(f"Row count: {df.count()}")

@@ -1,0 +1,13 @@
+rule_id: SDK002
+title: "collect() without a preceding limit()"
+severity: warning
+category: performance
+languages: [python, scala, java]
+explanation: >-
+  collect() moves the entire DataFrame to the driver. On a large dataset this causes driver OOM, long GC pauses, and job failure. There is no automatic protection — Spark will attempt to transfer all rows regardless of size.
+suggestion: >-
+  Add .limit(N) before .collect() to bound the result:
+
+  df.limit(10_000).collect()
+
+  If you genuinely need all rows on the driver, use .toPandas() on a sampled subset, or write to storage and read locally.

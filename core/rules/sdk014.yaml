@@ -1,0 +1,9 @@
+rule_id: SDK014
+title: "AQE explicitly disabled"
+severity: warning
+category: performance
+languages: [python, scala, java]
+explanation: >-
+  Adaptive Query Execution (AQE) dynamically optimizes shuffle partitions, converts sort-merge joins to broadcast joins, and handles skewed joins. Disabling it removes these automatic optimizations and forces static query planning that can't adapt to actual data characteristics.
+suggestion: >-
+  Remove the spark.sql.adaptive.enabled=false setting. AQE is enabled by default in Spark 3.2+ and provides significant performance improvements with no downside for most workloads. If you disabled it to work around a specific bug, check if the bug is fixed in your current Spark version.

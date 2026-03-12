@@ -1,0 +1,12 @@
+rule_id: SDK008
+title: "Cross-DataFrame column reference"
+severity: warning
+category: correctness
+languages: [python, scala, java]
+explanation: >-
+  Referencing a column as df1.colA inside df2.select() can cause AnalysisException at runtime when the DataFrames come from different lineages. Spark resolves the column against df1's plan, not df2's.
+suggestion: >-
+  Use string column names or F.col() instead of DataFrame attribute access.
+
+  # Bad:  df2.select(df1.colA)
+  # Good: df2.select("colA")  or  df2.select(F.col("colA"))

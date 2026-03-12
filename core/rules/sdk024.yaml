@@ -1,0 +1,12 @@
+rule_id: SDK024
+title: "Streaming read without explicit schema"
+severity: info
+category: correctness
+languages: [python, scala, java]
+explanation: >-
+  Streaming jobs run indefinitely. A schema inferred at startup will break when the source schema changes, causing the stream to fail silently or corrupt data. Explicit schemas also prevent Spark from doing a schema inference scan at startup which adds latency.
+suggestion: >-
+  Define an explicit schema for streaming reads.
+
+  # Bad:  spark.readStream.format("json").load(path)
+  # Good: spark.readStream.schema(my_schema).format("json").load(path)

@@ -1,0 +1,13 @@
+rule_id: SDK017
+title: 'select("*") reads all columns'
+severity: warning
+category: style
+languages: [python, scala, java]
+explanation: >-
+  select('*') reads every column from the source, defeating column pruning. On wide tables (hundreds of columns) or columnar formats (Parquet, ORC), this reads far more data than needed and wastes I/O, memory, and shuffle bytes.
+suggestion: >-
+  List only the columns you need:
+
+  df.select('user_id', 'event_type', 'timestamp')
+
+  If you truly need all columns, use the DataFrame directly without select.

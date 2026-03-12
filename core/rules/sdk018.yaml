@@ -1,0 +1,12 @@
+rule_id: SDK018
+title: "Inconsistent column reference style"
+severity: info
+category: style
+languages: [python]
+explanation: >-
+  Mixing F.col(), df["col"], and df.col styles in the same file creates cognitive overhead during code review. df.col is particularly risky because it looks like a Python attribute and may silently produce Column objects that cause AnalysisExceptions.
+suggestion: >-
+  Pick one column reference style and use it consistently. Recommended: F.col() or string literals for Spark 3.0+.
+
+  df.select(F.col("name"), F.col("age"))  # consistent F.col()
+  df.select("name", "age")                 # consistent string

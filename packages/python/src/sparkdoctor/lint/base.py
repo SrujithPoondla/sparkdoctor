@@ -65,36 +65,39 @@ _CATEGORY_MAP = {
 _rules_spec: dict[str, dict] | None = None
 
 
-def _find_rules_yaml() -> Path | None:
-    """Walk up from this file to find core/rules.yaml."""
+def _find_rules_dir() -> Path | None:
+    """Walk up from this file to find core/rules/ directory."""
     current = Path(__file__).resolve().parent
     for _ in range(10):
-        candidate = current / "core" / "rules.yaml"
-        if candidate.exists():
+        candidate = current / "core" / "rules"
+        if candidate.is_dir():
             return candidate
         current = current.parent
     return None
 
 
 def _load_rules_spec() -> dict[str, dict]:
-    """Load and cache the rules spec from core/rules.yaml."""
+    """Load and cache rule specs from core/rules/*.yaml (one file per rule)."""
     global _rules_spec
     if _rules_spec is not None:
         return _rules_spec
 
-    yaml_path = _find_rules_yaml()
-    if yaml_path is None or _yaml is None:
+    rules_dir = _find_rules_dir()
+    if rules_dir is None or _yaml is None:
         if _yaml is None:
             logger.debug("PyYAML not installed — rules metadata loaded from class attributes")
         else:
-            logger.debug("core/rules.yaml not found — rules metadata loaded from class attributes")
+            logger.debug("core/rules/ not found — rules metadata loaded from class attributes")
         _rules_spec = {}
         return _rules_spec
 
-    with open(yaml_path) as f:
-        data = _yaml.safe_load(f)
+    _rules_spec = {}
+    for yaml_file in sorted(rules_dir.glob("*.yaml")):
+        with open(yaml_file) as f:
+            spec = _yaml.safe_load(f)
+        if spec and "rule_id" in spec:
+            _rules_spec[spec["rule_id"]] = spec
 
-    _rules_spec = data.get("rules", {})
     return _rules_spec
 
 

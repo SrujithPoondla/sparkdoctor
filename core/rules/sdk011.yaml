@@ -1,0 +1,13 @@
+rule_id: SDK011
+title: "Magic literal in filter/when condition"
+severity: warning
+category: style
+languages: [python, scala, java]
+explanation: >-
+  Magic literals make code brittle and opaque. When a threshold or status value changes, the developer must find every occurrence. Named constants centralize business logic and make code self-documenting.
+suggestion: >-
+  Extract the literal to a named constant.
+
+  # Bad:  df.filter(F.col("status") == "active")
+  # Good: ACTIVE_STATUS = "active"
+  #        df.filter(F.col("status") == ACTIVE_STATUS)

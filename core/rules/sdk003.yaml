@@ -1,0 +1,16 @@
+rule_id: SDK003
+title: "count() used as an emptiness check"
+severity: warning
+category: style
+languages: [python, scala, java]
+explanation: >-
+  count() forces a full scan of the entire dataset to return a single number. Using it to answer a yes/no question (is this DataFrame empty?) wastes all that compute. On a 10 TB table, you scan 10 TB to learn the answer is "no".
+suggestion: >-
+  Use isEmpty() or limit(1) instead:
+
+  if df.isEmpty():          # short-circuits after finding the first row
+  ...
+  if df.limit(1).count() == 0:   # scans at most 1 row
+  ...
+
+  Note: isEmpty() is available in Spark 2.4+.

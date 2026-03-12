@@ -1,0 +1,13 @@
+rule_id: SDK012
+title: "toPandas() without a preceding limit()"
+severity: error
+category: performance
+languages: [python]
+explanation: >-
+  toPandas() collects ALL rows from ALL executors to the driver in a single operation. On a large DataFrame this causes driver OOM, interrupts concurrent readers, and can corrupt downstream state. There is no automatic size guard.
+suggestion: >-
+  Add .limit(N) before .toPandas() to bound the result:
+
+  pandas_df = spark_df.limit(10_000).toPandas()
+
+  If you genuinely need the full result as pandas, write to storage first and read with pandas locally.
