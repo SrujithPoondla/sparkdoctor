@@ -1,4 +1,5 @@
 """Tests for SDK008 — Cross-DataFrame column reference."""
+
 import ast
 
 import pytest
@@ -45,10 +46,7 @@ def test_cross_df_in_filter():
 
 
 def test_same_df_ref():
-    source = _PYSPARK + (
-        "df = spark.read.parquet('data')\n"
-        "result = df.select(df.name, df.age)\n"
-    )
+    source = _PYSPARK + ("df = spark.read.parquet('data')\nresult = df.select(df.name, df.age)\n")
     results = check(source)
     assert results == []
 
@@ -64,11 +62,7 @@ def test_string_column_refs():
 
 
 def test_no_pyspark_import():
-    source = (
-        "df1 = some_lib.read('a')\n"
-        "df2 = some_lib.read('b')\n"
-        "result = df2.select(df1.name)\n"
-    )
+    source = "df1 = some_lib.read('a')\ndf2 = some_lib.read('b')\nresult = df2.select(df1.name)\n"
     results = check(source)
     assert results == []
 
@@ -77,10 +71,7 @@ def test_no_pyspark_import():
 
 
 def test_only_one_df_variable():
-    source = _PYSPARK + (
-        "df = spark.read.parquet('data')\n"
-        "result = df.select(df.name)\n"
-    )
+    source = _PYSPARK + ("df = spark.read.parquet('data')\nresult = df.select(df.name)\n")
     results = check(source)
     assert results == []
 
@@ -95,17 +86,18 @@ def test_cross_df_in_withcolumn():
     assert len(results) == 1
 
 
-@pytest.mark.parametrize("method,call", [
-    ("where", "df2.where(df1.active)"),
-    ("drop", "df2.drop(df1.col)"),
-    ("groupBy", "df2.groupBy(df1.category)"),
-    ("orderBy", "df2.orderBy(df1.timestamp)"),
-])
+@pytest.mark.parametrize(
+    "method,call",
+    [
+        ("where", "df2.where(df1.active)"),
+        ("drop", "df2.drop(df1.col)"),
+        ("groupBy", "df2.groupBy(df1.category)"),
+        ("orderBy", "df2.orderBy(df1.timestamp)"),
+    ],
+)
 def test_cross_df_in_other_methods(method, call):
     source = _PYSPARK + (
-        "df1 = spark.read.parquet('a')\n"
-        "df2 = spark.read.parquet('b')\n"
-        f"result = {call}\n"
+        f"df1 = spark.read.parquet('a')\ndf2 = spark.read.parquet('b')\nresult = {call}\n"
     )
     results = check(source)
     assert len(results) == 1

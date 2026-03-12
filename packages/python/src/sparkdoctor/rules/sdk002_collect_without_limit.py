@@ -3,6 +3,7 @@ SDK002 — collect() without a preceding limit().
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast

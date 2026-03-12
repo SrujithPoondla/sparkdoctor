@@ -1,4 +1,5 @@
 """Base classes for SparkDoctor's lint engine: Rule, Diagnostic, Severity."""
+
 from __future__ import annotations
 
 import ast
@@ -191,9 +192,7 @@ class Rule(ABC):
 
         rule_id = getattr(cls, "rule_id", None)
         if not rule_id:
-            raise TypeError(
-                f"Rule subclass {cls.__name__} must define class attribute 'rule_id'"
-            )
+            raise TypeError(f"Rule subclass {cls.__name__} must define class attribute 'rule_id'")
 
         # Load metadata from rules.yaml if available
         spec = _load_rules_spec().get(rule_id)

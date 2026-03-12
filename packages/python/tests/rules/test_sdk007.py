@@ -1,4 +1,5 @@
 """Tests for SDK007 — cache()/persist() without unpersist()."""
+
 import ast
 
 from sparkdoctor.rules.sdk007_unpersisted_cache import UnpersistedCacheRule
@@ -17,20 +18,26 @@ def check(source: str):
 
 
 def test_detects_cache_without_unpersist():
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 df.cache()
 result = df.count()
 """.strip()
+    )
     results = check(source)
     assert len(results) == 1
     assert results[0].rule_id == "SDK007"
 
 
 def test_detects_persist_without_unpersist():
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 df.persist()
 result = df.count()
 """.strip()
+    )
     results = check(source)
     assert len(results) == 1
 
@@ -39,11 +46,14 @@ result = df.count()
 
 
 def test_allows_cache_with_unpersist():
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 df.cache()
 result = df.count()
 df.unpersist()
 """.strip()
+    )
     results = check(source)
     assert results == []
 
@@ -52,21 +62,27 @@ df.unpersist()
 
 
 def test_allows_persist_with_unpersist():
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 df.persist()
 process(df)
 df.unpersist()
 """.strip()
+    )
     results = check(source)
     assert results == []
 
 
 def test_multiple_cached_one_unpersisted():
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 df1.cache()
 df2.cache()
 df1.unpersist()
 """.strip()
+    )
     results = check(source)
     assert len(results) == 1
     # df2 is the unpersisted one
@@ -74,23 +90,29 @@ df1.unpersist()
 
 def test_assigned_cache_with_both_unpersisted():
     """cached_df = df.cache(), both names unpersisted — clean."""
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 cached_df = df.cache()
 process(cached_df)
 cached_df.unpersist()
 df.unpersist()
 """.strip()
+    )
     results = check(source)
     assert results == []
 
 
 def test_assigned_cache_with_target_unpersisted():
     """cached_df = df.cache(), only target unpersisted — df still flagged."""
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 cached_df = df.cache()
 process(cached_df)
 cached_df.unpersist()
 """.strip()
+    )
     results = check(source)
     # df is still tracked as cached but not unpersisted
     assert len(results) == 1
@@ -98,10 +120,13 @@ cached_df.unpersist()
 
 def test_assigned_cache_without_unpersist():
     """cached_df = df.cache() without any unpersist — both flagged."""
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 cached_df = df.cache()
 process(cached_df)
 """.strip()
+    )
     results = check(source)
     assert len(results) == 2
 
@@ -150,9 +175,12 @@ dataset = dataset.cache()
 
 def test_allows_rdd_cache():
     """RDD cache via sparkContext.parallelize() chain should not fire."""
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 rdd = sc.parallelize([1, 2, 3]).map(lambda x: x * 2).cache()
 """.strip()
+    )
     results = check(source)
     assert results == []
 
@@ -170,9 +198,12 @@ df.cache()
 
 def test_still_detects_spark_cache():
     """Spark DataFrame .cache() without unpersist should still fire."""
-    source = _PYSPARK_IMPORT + """
+    source = (
+        _PYSPARK_IMPORT
+        + """
 df.cache()
 result = df.count()
 """.strip()
+    )
     results = check(source)
     assert len(results) == 1

@@ -1,4 +1,5 @@
 """Tests for SDK003 — count() used as an emptiness check."""
+
 import ast
 
 from sparkdoctor.rules.sdk003_count_as_emptiness_check import CountAsEmptinessCheckRule

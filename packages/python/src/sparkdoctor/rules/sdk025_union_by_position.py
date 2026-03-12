@@ -3,6 +3,7 @@ SDK025 — union() instead of unionByName().
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast
@@ -32,8 +33,7 @@ class UnionByPositionRule(Rule):
                 Diagnostic(
                     rule_id=self.rule_id,
                     severity=self.severity,
-                    message="union() matches columns by position — "
-                    "use unionByName() instead",
+                    message="union() matches columns by position — use unionByName() instead",
                     explanation=self._EXPLANATION,
                     suggestion=self._SUGGESTION,
                     line=node.lineno,
@@ -71,8 +71,10 @@ class UnionByPositionRule(Rule):
                 continue
             if not isinstance(node.target, ast.Name):
                 continue
-            if isinstance(node.iter, (ast.List, ast.Tuple)) and node.iter.elts and all(
-                self._is_set_expression(elt) for elt in node.iter.elts
+            if (
+                isinstance(node.iter, (ast.List, ast.Tuple))
+                and node.iter.elts
+                and all(self._is_set_expression(elt) for elt in node.iter.elts)
             ):
                 set_vars.add(node.target.id)
         return set_vars

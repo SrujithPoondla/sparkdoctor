@@ -3,6 +3,7 @@ SDK027 — orderBy() or sort() immediately before write.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast
@@ -42,7 +43,4 @@ class OrderByBeforeWriteRule(Rule):
 
     def _is_sort_call(self, node: ast.Call) -> bool:
         """Check if this is a .orderBy() or .sort() call."""
-        return (
-            isinstance(node.func, ast.Attribute)
-            and node.func.attr in self._SORT_METHODS
-        )
+        return isinstance(node.func, ast.Attribute) and node.func.attr in self._SORT_METHODS

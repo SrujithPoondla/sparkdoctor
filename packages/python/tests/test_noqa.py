@@ -1,4 +1,5 @@
 """Tests for inline # noqa suppression comments."""
+
 import ast
 
 from sparkdoctor.lint.engine import LintEngine

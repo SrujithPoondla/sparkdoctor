@@ -1,4 +1,5 @@
 """Tests for output renderers."""
+
 import json
 
 from rich.console import Console

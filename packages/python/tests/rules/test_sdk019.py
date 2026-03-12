@@ -1,4 +1,5 @@
 """Tests for SDK019 — inferSchema=True in production read."""
+
 import ast
 
 from sparkdoctor.rules.sdk019_infer_schema import InferSchemaRule

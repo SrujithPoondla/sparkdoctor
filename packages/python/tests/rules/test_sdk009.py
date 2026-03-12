@@ -1,4 +1,5 @@
 """Tests for SDK009 — Long transformation chain."""
+
 import ast
 
 from sparkdoctor.rules.sdk009_chain_length import ChainLengthRule
@@ -15,8 +16,7 @@ def check(source: str):
 
 def test_chain_of_6():
     source = _PYSPARK + (
-        "result = df.filter(x).withColumn('a', b).groupBy('c')"
-        ".agg(d).filter(e).orderBy('f')\n"
+        "result = df.filter(x).withColumn('a', b).groupBy('c').agg(d).filter(e).orderBy('f')\n"
     )
     results = check(source)
     assert len(results) == 1
@@ -42,9 +42,7 @@ def test_chain_of_8():
 
 
 def test_chain_of_3():
-    source = _PYSPARK + (
-        "result = df.filter(x).withColumn('a', b).select('c')\n"
-    )
+    source = _PYSPARK + ("result = df.filter(x).withColumn('a', b).select('c')\n")
     results = check(source)
     assert results == []
 
@@ -58,26 +56,19 @@ def test_chain_of_5_at_threshold():
 
 
 def test_no_pyspark_import():
-    source = (
-        "result = df.filter(x).withColumn('a', b).groupBy('c')"
-        ".agg(d).filter(e).orderBy('f')\n"
-    )
+    source = "result = df.filter(x).withColumn('a', b).groupBy('c').agg(d).filter(e).orderBy('f')\n"
     results = check(source)
     assert results == []
 
 
 def test_no_duplicate_for_same_chain():
-    source = _PYSPARK + (
-        "result = df.a().b().c().d().e().f()\n"
-    )
+    source = _PYSPARK + ("result = df.a().b().c().d().e().f()\n")
     results = check(source)
     assert len(results) == 1
 
 
 def test_nested_chains_detected_independently():
     """Two independent long chains — one as argument to the other."""
-    source = _PYSPARK + (
-        "result = df.a().b().c().d().e().f(other.x().y().z().w().v().u())\n"
-    )
+    source = _PYSPARK + ("result = df.a().b().c().d().e().f(other.x().y().z().w().v().u())\n")
     results = check(source)
     assert len(results) == 2

@@ -1,4 +1,5 @@
 """Rich-based terminal renderer for SparkDoctor diagnostics."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -10,9 +11,9 @@ from sparkdoctor import __version__
 from sparkdoctor.lint.base import Diagnostic, Severity
 
 _SEVERITY_ICONS = {
-    Severity.ERROR: "\u2716",    # ✖
+    Severity.ERROR: "\u2716",  # ✖
     Severity.WARNING: "\u26a0",  # ⚠
-    Severity.INFO: "\u2139",     # ℹ
+    Severity.INFO: "\u2139",  # ℹ
 }
 
 _SEVERITY_STYLES = {
@@ -51,10 +52,7 @@ def render(
             icon = _SEVERITY_ICONS[d.severity]
             style = _SEVERITY_STYLES[d.severity]
             console.print(
-                f"  [{style}]{icon}[/{style}]  "
-                f"line {d.line}  "
-                f"[dim]{d.rule_id}[/dim]  "
-                f"{d.message}"
+                f"  [{style}]{icon}[/{style}]  line {d.line}  [dim]{d.rule_id}[/dim]  {d.message}"
             )
             if verbose:
                 console.print(f"     {d.explanation}")

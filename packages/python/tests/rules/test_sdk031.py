@@ -1,4 +1,5 @@
 """Tests for SDK031 — collect() or toPandas() inside a loop."""
+
 import ast
 
 from sparkdoctor.rules.sdk031_collect_in_loop import CollectInLoopRule

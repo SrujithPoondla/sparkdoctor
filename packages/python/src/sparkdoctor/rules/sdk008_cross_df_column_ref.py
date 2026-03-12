@@ -3,6 +3,7 @@ SDK008 — Cross-DataFrame column reference.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast

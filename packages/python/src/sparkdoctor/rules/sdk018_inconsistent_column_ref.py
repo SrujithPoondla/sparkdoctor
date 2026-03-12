@@ -3,6 +3,7 @@ SDK018 — Inconsistent column reference style.
 
 Severity: INFO
 """
+
 from __future__ import annotations
 
 import ast
@@ -18,31 +19,99 @@ class InconsistentColumnRefRule(Rule):
 
     # DataFrame methods — used to identify DF variables and attribute access context.
     _DF_METHODS = {
-        "select", "filter", "where", "withColumn", "groupBy",
-        "orderBy", "sort", "agg", "drop", "join", "union", "unionAll",
-        "crossJoin", "limit", "distinct", "dropDuplicates",
-        "withColumnRenamed", "alias", "toDF",
+        "select",
+        "filter",
+        "where",
+        "withColumn",
+        "groupBy",
+        "orderBy",
+        "sort",
+        "agg",
+        "drop",
+        "join",
+        "union",
+        "unionAll",
+        "crossJoin",
+        "limit",
+        "distinct",
+        "dropDuplicates",
+        "withColumnRenamed",
+        "alias",
+        "toDF",
     }
 
     # Attributes that are NOT column access on a DataFrame.
     _NON_COLUMN_ATTRS = {
-        "columns", "schema", "dtypes", "rdd", "write", "writeStream",
-        "read", "readStream", "sql", "conf", "sparkContext", "udf",
-        "cache", "persist", "unpersist", "count", "collect",
-        "show", "head", "first", "take", "toPandas",
-        "alias", "asc", "desc", "cast",
-        "otherwise", "over", "between", "isin",
-        "isNull", "isNotNull", "na", "stat",
-        "explain", "printSchema", "describe", "summary",
-        "createOrReplaceTempView", "createTempView",
-        "isEmpty", "unionByName", "sortWithinPartitions",
-        "repartition", "coalesce", "sample", "sampleBy",
-        "crossJoin", "subtract", "intersect", "exceptAll",
-        "transform", "observe", "checkpoint", "localCheckpoint",
-        "mapInPandas", "mapInArrow", "foreach", "foreachPartition",
-        "toJSON", "toLocalIterator", "randomSplit",
-        "freqItems", "approxQuantile", "crosstab", "cov", "corr",
-        "withWatermark", "isStreaming", "isLocal",
+        "columns",
+        "schema",
+        "dtypes",
+        "rdd",
+        "write",
+        "writeStream",
+        "read",
+        "readStream",
+        "sql",
+        "conf",
+        "sparkContext",
+        "udf",
+        "cache",
+        "persist",
+        "unpersist",
+        "count",
+        "collect",
+        "show",
+        "head",
+        "first",
+        "take",
+        "toPandas",
+        "alias",
+        "asc",
+        "desc",
+        "cast",
+        "otherwise",
+        "over",
+        "between",
+        "isin",
+        "isNull",
+        "isNotNull",
+        "na",
+        "stat",
+        "explain",
+        "printSchema",
+        "describe",
+        "summary",
+        "createOrReplaceTempView",
+        "createTempView",
+        "isEmpty",
+        "unionByName",
+        "sortWithinPartitions",
+        "repartition",
+        "coalesce",
+        "sample",
+        "sampleBy",
+        "crossJoin",
+        "subtract",
+        "intersect",
+        "exceptAll",
+        "transform",
+        "observe",
+        "checkpoint",
+        "localCheckpoint",
+        "mapInPandas",
+        "mapInArrow",
+        "foreach",
+        "foreachPartition",
+        "toJSON",
+        "toLocalIterator",
+        "randomSplit",
+        "freqItems",
+        "approxQuantile",
+        "crosstab",
+        "cov",
+        "corr",
+        "withWatermark",
+        "isStreaming",
+        "isLocal",
     } | _DF_METHODS
 
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
@@ -66,11 +135,7 @@ class InconsistentColumnRefRule(Rule):
                     receiver = node.func.value
                     if isinstance(receiver, ast.Name) and receiver.id in func_aliases:
                         styles.setdefault("F.col()", []).append(node.lineno)
-                elif (
-                    has_bare_col
-                    and isinstance(node.func, ast.Name)
-                    and node.func.id == "col"
-                ):
+                elif has_bare_col and isinstance(node.func, ast.Name) and node.func.id == "col":
                     styles.setdefault("F.col()", []).append(node.lineno)
 
             # df["col"] — only on known DataFrame variables

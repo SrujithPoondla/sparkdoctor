@@ -3,6 +3,7 @@ SDK019 — inferSchema=True in production read (CSV/JSON).
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast

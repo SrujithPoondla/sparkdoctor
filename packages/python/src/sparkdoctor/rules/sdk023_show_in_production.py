@@ -3,6 +3,7 @@ SDK023 — show() left in production code.
 
 Severity: INFO
 """
+
 from __future__ import annotations
 
 import ast
@@ -23,16 +24,37 @@ class ShowInProductionRule(Rule):
 
     # Chain methods that indicate matplotlib / visualization, not Spark
     _VIZ_CHAIN_METHODS = {
-        "subplots", "subplot", "imshow", "bar", "scatter", "hist",
-        "plot", "pie", "boxplot", "violinplot", "heatmap",
+        "subplots",
+        "subplot",
+        "imshow",
+        "bar",
+        "scatter",
+        "hist",
+        "plot",
+        "pie",
+        "boxplot",
+        "violinplot",
+        "heatmap",
     }
 
     # Libraries whose .show() is not Spark
     _VIZ_IMPORT_MODULES = {
-        "matplotlib", "plotly", "bokeh", "seaborn", "yellowbrick",
-        "altair", "holoviews", "pygal",
-        "tkinter", "PyQt5", "PyQt6", "PySide2", "PySide6", "wx",
-        "kivy", "pygame",
+        "matplotlib",
+        "plotly",
+        "bokeh",
+        "seaborn",
+        "yellowbrick",
+        "altair",
+        "holoviews",
+        "pygal",
+        "tkinter",
+        "PyQt5",
+        "PyQt6",
+        "PySide2",
+        "PySide6",
+        "wx",
+        "kivy",
+        "pygame",
         "IPython",
     }
 
@@ -60,8 +82,7 @@ class ShowInProductionRule(Rule):
                 Diagnostic(
                     rule_id=self.rule_id,
                     severity=self.severity,
-                    message=".show() triggers a Spark action — "
-                    "remove or guard in production code",
+                    message=".show() triggers a Spark action — remove or guard in production code",
                     explanation=self._EXPLANATION,
                     suggestion=self._SUGGESTION,
                     line=node.lineno,
@@ -98,12 +119,11 @@ class ShowInProductionRule(Rule):
             elif (
                 isinstance(node, ast.ImportFrom)
                 and node.module
-                and node.module.split(".")[0]
-                in self._VIZ_IMPORT_MODULES
+                and node.module.split(".")[0] in self._VIZ_IMPORT_MODULES
             ):
                 for alias in node.names:
-                        name = alias.asname or alias.name
-                        viz_vars.add(name)
+                    name = alias.asname or alias.name
+                    viz_vars.add(name)
         # Track variables assigned from viz calls (fig = plt.figure())
         for node in ast.walk(tree):
             if not isinstance(node, ast.Assign):

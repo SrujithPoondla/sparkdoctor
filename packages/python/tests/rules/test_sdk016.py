@@ -1,4 +1,5 @@
 """Tests for SDK016 — crossJoin() usage."""
+
 import ast
 
 from sparkdoctor.rules.sdk016_cross_join import CrossJoinRule

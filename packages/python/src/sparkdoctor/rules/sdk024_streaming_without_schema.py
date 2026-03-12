@@ -3,6 +3,7 @@ SDK024 — Streaming readStream without explicit schema.
 
 Severity: INFO
 """
+
 from __future__ import annotations
 
 import ast

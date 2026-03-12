@@ -1,4 +1,5 @@
 """Tests for SDK023 — show() left in production code."""
+
 import ast
 
 from sparkdoctor.rules.sdk023_show_in_production import ShowInProductionRule
@@ -102,7 +103,7 @@ fig.show()
 
 def test_allows_viz_chain_show():
     """ax.imshow(...).show() — visualization chain method, not Spark."""
-    source = 'ax.imshow(data).show()'
+    source = "ax.imshow(data).show()"
     results = check(source)
     assert results == []
 

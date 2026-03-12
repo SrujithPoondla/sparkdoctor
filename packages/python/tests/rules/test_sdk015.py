@@ -1,4 +1,5 @@
 """Tests for SDK015 — Hardcoded spark.sql.shuffle.partitions."""
+
 import ast
 
 from sparkdoctor.rules.sdk015_hardcoded_shuffle_partitions import HardcodedShufflePartitionsRule

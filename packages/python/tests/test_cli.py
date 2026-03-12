@@ -1,4 +1,5 @@
 """CLI smoke tests for sparkdoctor lint."""
+
 import json
 from pathlib import Path
 
@@ -18,9 +19,7 @@ def test_lint_bad_job_terminal():
 
 
 def test_lint_bad_job_json():
-    result = runner.invoke(
-        app, ["lint", str(FIXTURES_DIR / "bad_job.py"), "--format", "json"]
-    )
+    result = runner.invoke(app, ["lint", str(FIXTURES_DIR / "bad_job.py"), "--format", "json"])
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert isinstance(data, list)
@@ -30,16 +29,12 @@ def test_lint_bad_job_json():
 
 
 def test_lint_bad_job_exit_code():
-    result = runner.invoke(
-        app, ["lint", str(FIXTURES_DIR / "bad_job.py"), "--exit-code"]
-    )
+    result = runner.invoke(app, ["lint", str(FIXTURES_DIR / "bad_job.py"), "--exit-code"])
     assert result.exit_code == 1
 
 
 def test_lint_clean_job_exit_code():
-    result = runner.invoke(
-        app, ["lint", str(FIXTURES_DIR / "clean_job.py"), "--exit-code"]
-    )
+    result = runner.invoke(app, ["lint", str(FIXTURES_DIR / "clean_job.py"), "--exit-code"])
     assert result.exit_code == 0
 
 
@@ -122,17 +117,13 @@ def test_lint_exclude_directory(tmp_path):
     test_file.write_text("df.repartition(100)")
 
     # Without exclude: both files scanned
-    result = runner.invoke(
-        app, ["lint", str(tmp_path), "--format", "json"]
-    )
+    result = runner.invoke(app, ["lint", str(tmp_path), "--format", "json"])
     data = json.loads(result.output)
     filenames = {d["filename"] for d in data}
     assert any("test_job.py" in f for f in filenames)
 
     # With exclude: tests/ skipped
-    result = runner.invoke(
-        app, ["lint", str(tmp_path), "--format", "json", "--exclude", "tests"]
-    )
+    result = runner.invoke(app, ["lint", str(tmp_path), "--format", "json", "--exclude", "tests"])
     data = json.loads(result.output)
     filenames = {d["filename"] for d in data}
     assert not any("test_job.py" in f for f in filenames)

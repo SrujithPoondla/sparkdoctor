@@ -1,4 +1,5 @@
 """Tests for SDK025 — union() instead of unionByName()."""
+
 import ast
 
 from sparkdoctor.rules.sdk025_union_by_position import UnionByPositionRule

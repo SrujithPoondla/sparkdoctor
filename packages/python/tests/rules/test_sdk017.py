@@ -1,4 +1,5 @@
 """Tests for SDK017 — select('*') wildcard."""
+
 import ast
 
 from sparkdoctor.rules.sdk017_select_star import SelectStarRule

@@ -3,6 +3,7 @@ SDK012 — toPandas() without a preceding limit().
 
 Severity: ERROR
 """
+
 from __future__ import annotations
 
 import ast

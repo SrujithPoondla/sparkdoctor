@@ -3,6 +3,7 @@ SDK020 — DROP TABLE or fs.rm before overwrite write.
 
 Severity: INFO
 """
+
 from __future__ import annotations
 
 import ast

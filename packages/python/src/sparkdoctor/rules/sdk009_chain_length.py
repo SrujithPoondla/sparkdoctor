@@ -3,6 +3,7 @@ SDK009 — Transformation chain longer than threshold.
 
 Severity: INFO
 """
+
 from __future__ import annotations
 
 import ast

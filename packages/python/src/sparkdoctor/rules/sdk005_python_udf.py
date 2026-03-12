@@ -3,6 +3,7 @@ SDK005 — Python UDF without Arrow optimization.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast
@@ -21,9 +22,7 @@ class PythonUdfRule(Rule):
         self._check_udf_calls(tree, diagnostics, decorator_ids)
         return diagnostics
 
-    def _check_decorators(
-        self, tree: ast.AST, diagnostics: list[Diagnostic]
-    ) -> set[int]:
+    def _check_decorators(self, tree: ast.AST, diagnostics: list[Diagnostic]) -> set[int]:
         """Check for @udf decorators on function definitions.
 
         Returns set of ast node ids already reported, to avoid duplicates.
@@ -42,7 +41,9 @@ class PythonUdfRule(Rule):
         return seen
 
     def _check_udf_calls(
-        self, tree: ast.AST, diagnostics: list[Diagnostic],
+        self,
+        tree: ast.AST,
+        diagnostics: list[Diagnostic],
         decorator_ids: set[int],
     ) -> None:
         """Check for udf() calls outside decorators (e.g. udf(lambda ...))."""
@@ -66,13 +67,10 @@ class PythonUdfRule(Rule):
         # @udf(returnType=...) or @F.udf(...)
         if isinstance(node, ast.Call):
             func = node.func
-            is_udf = (
-                (isinstance(func, ast.Name) and func.id == "udf")
-                or (
-                    isinstance(func, ast.Attribute)
-                    and func.attr == "udf"
-                    and isinstance(func.value, ast.Name)
-                )
+            is_udf = (isinstance(func, ast.Name) and func.id == "udf") or (
+                isinstance(func, ast.Attribute)
+                and func.attr == "udf"
+                and isinstance(func.value, ast.Name)
             )
             if is_udf:
                 return not self._has_use_arrow(node)

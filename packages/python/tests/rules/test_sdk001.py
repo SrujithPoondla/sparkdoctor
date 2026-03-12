@@ -1,4 +1,5 @@
 """Tests for SDK001 — Hardcoded repartition count."""
+
 import ast
 
 from sparkdoctor.rules.sdk001_hardcoded_repartition import HardcodedRepartitionRule

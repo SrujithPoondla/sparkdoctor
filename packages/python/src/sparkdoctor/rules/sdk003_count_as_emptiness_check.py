@@ -3,6 +3,7 @@ SDK003 — count() used as an emptiness check.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast

@@ -3,6 +3,7 @@ SDK013 — RDD API usage on DataFrame.
 
 Severity: ERROR
 """
+
 from __future__ import annotations
 
 import ast

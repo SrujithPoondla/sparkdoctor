@@ -1,4 +1,5 @@
 """JSON output renderer for SparkDoctor diagnostics."""
+
 from __future__ import annotations
 
 import json

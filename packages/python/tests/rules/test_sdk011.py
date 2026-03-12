@@ -1,4 +1,5 @@
 """Tests for SDK011 — Magic literal in filter/when condition."""
+
 import ast
 
 from sparkdoctor.rules.sdk011_magic_literal import MagicLiteralRule
@@ -41,10 +42,7 @@ def test_literal_in_where():
 
 
 def test_named_constant():
-    source = _PYSPARK + (
-        'ACTIVE_STATUS = "active"\n'
-        'df.filter(F.col("status") == ACTIVE_STATUS)\n'
-    )
+    source = _PYSPARK + ('ACTIVE_STATUS = "active"\ndf.filter(F.col("status") == ACTIVE_STATUS)\n')
     results = check(source)
     assert not any("active" in r.message for r in results)
 
@@ -66,9 +64,7 @@ def test_no_pyspark_import():
 
 
 def test_multiple_magic_literals_same_filter():
-    source = _PYSPARK + (
-        'df.filter((F.col("status") == "active") & (F.col("tier") > 5))\n'
-    )
+    source = _PYSPARK + ('df.filter((F.col("status") == "active") & (F.col("tier") > 5))\n')
     results = check(source)
     assert any("active" in r.message for r in results)
     assert any("5" in r.message for r in results)

@@ -3,6 +3,7 @@ SDK017 — select("*") wildcard in production code.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast
@@ -47,10 +48,7 @@ class SelectStarRule(Rule):
     def _is_sub_accessor_call(self, node: ast.Call) -> bool:
         """Return True if select is called via a sub-accessor (e.g. df.cols.select)."""
         receiver = node.func.value
-        return (
-            isinstance(receiver, ast.Attribute)
-            and receiver.attr in self._NON_DF_ACCESSORS
-        )
+        return isinstance(receiver, ast.Attribute) and receiver.attr in self._NON_DF_ACCESSORS
 
     def _has_star_arg(self, node: ast.Call) -> bool:
         """Check if any positional argument is the literal string '*'."""

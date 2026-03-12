@@ -1,4 +1,5 @@
 """Corpus tests for SDK011 — magic literals in filter/when."""
+
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 

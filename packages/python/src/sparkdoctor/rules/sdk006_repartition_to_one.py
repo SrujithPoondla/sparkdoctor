@@ -3,6 +3,7 @@ SDK006 — repartition(1) or coalesce(1) forces single-partition execution.
 
 Severity: ERROR
 """
+
 from __future__ import annotations
 
 import ast

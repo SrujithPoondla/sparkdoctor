@@ -1,4 +1,5 @@
 """SparkDoctor CLI — entry point for the lint command."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -46,24 +47,21 @@ def lint(
     exit_code: bool = typer.Option(
         False, "--exit-code", help="Exit with code 1 if diagnostics are found"
     ),
-    no_color: bool = typer.Option(
-        False, "--no-color", help="Disable colored output"
-    ),
+    no_color: bool = typer.Option(False, "--no-color", help="Disable colored output"),
     exclude: Optional[list[str]] = typer.Option(
-        None, "--exclude", "-e",
-        help="Glob patterns to exclude (e.g. 'tests' or 'test_*')"
+        None, "--exclude", "-e", help="Glob patterns to exclude (e.g. 'tests' or 'test_*')"
     ),
     disable: Optional[list[str]] = typer.Option(
-        None, "--disable", "-d",
-        help="Rule IDs to disable (e.g. 'SDK023' or 'SDK002')"
+        None, "--disable", "-d", help="Rule IDs to disable (e.g. 'SDK023' or 'SDK002')"
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", "-v",
-        help="Show explanation and fix suggestion for each finding (terminal only)"
+        False,
+        "--verbose",
+        "-v",
+        help="Show explanation and fix suggestion for each finding (terminal only)",
     ),
     no_config: bool = typer.Option(
-        False, "--no-config",
-        help="Ignore pyproject.toml [tool.sparkdoctor] configuration"
+        False, "--no-config", help="Ignore pyproject.toml [tool.sparkdoctor] configuration"
     ),
 ) -> None:
     """Lint PySpark files for quality issues."""
@@ -98,8 +96,7 @@ def lint(
             min_severity = Severity(severity.lower())
         except ValueError:
             typer.echo(
-                f"sparkdoctor: error: invalid severity '{severity}'. "
-                "Use error, warning, or info.",
+                f"sparkdoctor: error: invalid severity '{severity}'. Use error, warning, or info.",
                 err=True,
             )
             raise typer.Exit(code=2) from None

@@ -1,4 +1,5 @@
 """Tests for SDK012 — toPandas() without a preceding limit()."""
+
 import ast
 
 from sparkdoctor.rules.sdk012_topandas_without_limit import ToPandasWithoutLimitRule
@@ -42,7 +43,7 @@ def test_allows_limit_before_topandas():
 
 
 def test_allows_chained_limit_before_topandas():
-    source = _PYSPARK_IMPORT + 'pandas_df = spark_df.filter(condition).limit(100).toPandas()'
+    source = _PYSPARK_IMPORT + "pandas_df = spark_df.filter(condition).limit(100).toPandas()"
     results = check(source)
     assert results == []
 

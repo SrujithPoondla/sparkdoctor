@@ -3,6 +3,7 @@ SDK004 — withColumn() called inside a loop.
 
 Severity: ERROR
 """
+
 from __future__ import annotations
 
 import ast
@@ -22,9 +23,7 @@ class WithColumnInLoopRule(Rule):
             if not isinstance(node, (ast.For, ast.While)):
                 continue
             # Walk only within the loop body (and orelse)
-            loop_body = ast.Module(
-                body=node.body + node.orelse, type_ignores=[]
-            )
+            loop_body = ast.Module(body=node.body + node.orelse, type_ignores=[])
             has_with_column = False
             for child in ast.walk(loop_body):
                 if isinstance(child, ast.Call) and is_method_call(child, "withColumn"):

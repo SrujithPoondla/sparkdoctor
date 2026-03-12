@@ -14,6 +14,7 @@ Annotation format:
 - ``# expect: none`` — assert no rule fires on this line (explicit negative)
 - Lines without ``# expect:`` annotations are not checked
 """
+
 from __future__ import annotations
 
 import ast
@@ -42,6 +43,10 @@ def parse_expectations(source_lines: list[str]) -> dict[int, set[str]]:
     Returns a dict mapping 1-indexed line numbers to:
     - set of rule IDs (e.g. {"SDK002", "SDK003"})
     - empty set for ``# expect: none`` (meaning zero diagnostics expected)
+
+    When an ``# expect:`` annotation appears on a closing-paren line (e.g.
+    ``)``, the expectation is applied to the preceding non-empty code line.
+    This handles ruff format wrapping multi-line expressions.
     """
     expectations: dict[int, set[str]] = {}
     for i, line in enumerate(source_lines, start=1):
@@ -50,8 +55,20 @@ def parse_expectations(source_lines: list[str]) -> dict[int, set[str]]:
             continue
         value = match.group(1).strip().lower()
         if value == "none":
-            expectations[i] = set()
+            codes: set[str] = set()
         else:
             codes = {c.strip().upper() for c in match.group(1).split(",")}
-            expectations[i] = codes
+
+        # If the code portion of this line is just a closing paren/bracket,
+        # apply the expectation to the preceding code line instead.
+        code_part = line.split("#")[0].strip()
+        target_line = i
+        if code_part in (")", "]", "}", "):", "],"):
+            for j in range(i - 1, 0, -1):
+                prev = source_lines[j - 1].strip()
+                if prev and not prev.startswith("#"):
+                    target_line = j
+                    break
+
+        expectations[target_line] = codes
     return expectations

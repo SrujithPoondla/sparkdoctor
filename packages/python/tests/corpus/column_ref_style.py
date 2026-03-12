@@ -1,4 +1,5 @@
 """Corpus tests for SDK018 — inconsistent column reference style."""
+
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 

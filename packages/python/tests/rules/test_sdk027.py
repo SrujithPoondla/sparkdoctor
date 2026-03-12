@@ -1,4 +1,5 @@
 """Tests for SDK027 — orderBy()/sort() before write."""
+
 import ast
 
 from sparkdoctor.rules.sdk027_orderby_before_write import OrderByBeforeWriteRule

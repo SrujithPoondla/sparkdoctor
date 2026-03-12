@@ -3,6 +3,7 @@ SDK016 — crossJoin() usage.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast
@@ -27,8 +28,7 @@ class CrossJoinRule(Rule):
                 Diagnostic(
                     rule_id=self.rule_id,
                     severity=self.severity,
-                    message="crossJoin() produces a cartesian product — "
-                    "verify this is intentional",
+                    message="crossJoin() produces a cartesian product — verify this is intentional",
                     explanation=self._EXPLANATION,
                     suggestion=self._SUGGESTION,
                     line=node.lineno,

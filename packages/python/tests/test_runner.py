@@ -1,4 +1,5 @@
 """Tests for file discovery, exclude logic, and lint_file error handling."""
+
 import logging
 from pathlib import Path
 

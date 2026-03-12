@@ -29,8 +29,7 @@ events = raw_events.repartition(200)
 # Someone wanted a single output file and did this. Now 500 GB flows through
 # one executor core.
 daily_summary = (
-    events
-    .filter(F.col("date") == "2024-01-15")
+    events.filter(F.col("date") == "2024-01-15")
     .groupBy("user_id")
     .agg(F.count("event_type").alias("event_count"))
     .coalesce(1)
@@ -53,10 +52,18 @@ clean_device = udf(lambda d: d.lower().strip() if d else "unknown", StringType()
 # 12 columns = 12 nested projections in the query plan.
 # Plan compilation time: seconds. At 100+ columns: minutes.
 BOOLEAN_FLAGS = [
-    "is_mobile", "is_premium", "has_notifications",
-    "has_2fa", "email_verified", "phone_verified",
-    "gdpr_consent", "marketing_opt_in", "beta_user",
-    "internal_user", "test_account", "churned",
+    "is_mobile",
+    "is_premium",
+    "has_notifications",
+    "has_2fa",
+    "email_verified",
+    "phone_verified",
+    "gdpr_consent",
+    "marketing_opt_in",
+    "beta_user",
+    "internal_user",
+    "test_account",
+    "churned",
 ]
 
 enriched = events
@@ -72,17 +79,16 @@ if events.count() == 0:
     exit(0)
 
 # Another form of the same pattern
-has_errors = (events.filter(F.col("status") == "error").count() > 0)
+has_errors = events.filter(F.col("status") == "error").count() > 0
 
 
 # ── SDK002: collect() without limit() ────────────────────────────────────────
 # Pulls all matching rows to the driver. If the filter is selective, fine.
 # If not, driver OOM.
 active_user_ids = (
-    users
-    .filter(F.col("status") == "active")
+    users.filter(F.col("status") == "active")
     .select("user_id")
-    .collect()   # No limit. "active" users could be 10M rows.
+    .collect()  # No limit. "active" users could be 10M rows.
 )
 
 
@@ -90,23 +96,18 @@ active_user_ids = (
 # Cached in memory, never released. In a long-running job or notebook session,
 # this accumulates until executor OOM.
 joined = (
-    events
-    .join(users, on="user_id", how="left")
+    events.join(users, on="user_id", how="left")
     .withColumn("country", normalize_country(F.col("country_code")))
     .withColumn("device", clean_device(F.col("device_type")))
 )
-joined.cache()   # Never unpersisted below
+joined.cache()  # Never unpersisted below
 
 
 # Final aggregation
-result = (
-    joined
-    .groupBy("country", "device")
-    .agg(
-        F.count("event_id").alias("total_events"),
-        F.countDistinct("user_id").alias("unique_users"),
-        F.avg("session_duration").alias("avg_session_sec"),
-    )
+result = joined.groupBy("country", "device").agg(
+    F.count("event_id").alias("total_events"),
+    F.countDistinct("user_id").alias("unique_users"),
+    F.avg("session_duration").alias("avg_session_sec"),
 )
 
 result.write.mode("overwrite").parquet("s3://output/summary/")

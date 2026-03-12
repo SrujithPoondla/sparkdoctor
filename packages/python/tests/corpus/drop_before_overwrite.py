@@ -1,4 +1,5 @@
 """Corpus tests for SDK020 — DROP TABLE before overwrite."""
+
 from pyspark.sql import SparkSession
 
 spark = SparkSession.builder.getOrCreate()

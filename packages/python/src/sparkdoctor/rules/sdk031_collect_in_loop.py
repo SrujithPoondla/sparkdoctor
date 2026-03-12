@@ -3,6 +3,7 @@ SDK031 — collect() or toPandas() called inside a loop.
 
 Severity: ERROR
 """
+
 from __future__ import annotations
 
 import ast
@@ -23,9 +24,7 @@ class CollectInLoopRule(Rule):
         self._walk_loops(tree, diagnostics, seen)
         return diagnostics
 
-    def _walk_loops(
-        self, tree: ast.AST, diagnostics: list[Diagnostic], seen: set[int]
-    ) -> None:
+    def _walk_loops(self, tree: ast.AST, diagnostics: list[Diagnostic], seen: set[int]) -> None:
         for node in ast.walk(tree):
             if isinstance(node, (ast.For, ast.While)):
                 self._check_loop_body(node, diagnostics, seen)

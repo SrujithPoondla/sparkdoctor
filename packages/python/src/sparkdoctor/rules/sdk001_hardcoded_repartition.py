@@ -3,6 +3,7 @@ SDK001 — Hardcoded repartition or coalesce count.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast

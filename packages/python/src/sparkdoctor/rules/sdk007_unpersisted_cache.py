@@ -3,6 +3,7 @@ SDK007 — cache() or persist() without corresponding unpersist().
 
 Severity: INFO
 """
+
 from __future__ import annotations
 
 import ast
@@ -24,15 +25,27 @@ class UnpersistedCacheRule(Rule):
 
     # Chain methods from RDD API (RDD.cache() is fine, no unpersist needed)
     _RDD_CHAIN_METHODS = {
-        "parallelize", "textFile", "wholeTextFiles",
-        "map", "flatMap", "reduceByKey", "groupByKey",
-        "mapPartitions", "mapValues", "sortByKey",
+        "parallelize",
+        "textFile",
+        "wholeTextFiles",
+        "map",
+        "flatMap",
+        "reduceByKey",
+        "groupByKey",
+        "mapPartitions",
+        "mapValues",
+        "sortByKey",
     }
 
     # Chain methods from TF dataset API
     _TF_CHAIN_METHODS = {
-        "from_tensor_slices", "from_generator", "from_tensors",
-        "batch", "prefetch", "repeat", "padded_batch",
+        "from_tensor_slices",
+        "from_generator",
+        "from_tensors",
+        "batch",
+        "prefetch",
+        "repeat",
+        "padded_batch",
     }
 
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
@@ -50,9 +63,7 @@ class UnpersistedCacheRule(Rule):
                 and isinstance(node.value.func, ast.Attribute)
                 and node.value.func.attr in self._CACHE_METHODS
             ):
-                assigned_cache_locations.add(
-                    (node.value.lineno, node.value.col_offset)
-                )
+                assigned_cache_locations.add((node.value.lineno, node.value.col_offset))
                 continue
 
         # Track: variable_name -> (cache_method, line, col)
@@ -110,8 +121,7 @@ class UnpersistedCacheRule(Rule):
                         rule_id=self.rule_id,
                         severity=self.severity,
                         message=(
-                            "cache()/persist() without unpersist() — "
-                            "cached data may leak memory"
+                            "cache()/persist() without unpersist() — cached data may leak memory"
                         ),
                         explanation=self._EXPLANATION,
                         suggestion=self._SUGGESTION,
@@ -129,4 +139,3 @@ class UnpersistedCacheRule(Rule):
         if chain_contains_method(node, self._TF_CHAIN_METHODS):
             return True
         return chain_contains_method(node, self._RDD_CHAIN_METHODS)
-

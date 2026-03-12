@@ -1,4 +1,5 @@
 """Shared AST utility functions for rule implementations."""
+
 from __future__ import annotations
 
 import ast
@@ -65,9 +66,16 @@ def chain_contains_method(node: ast.AST, method_names: set[str]) -> bool:
 
 # Methods that indicate the receiver chain is an RDD, not a DataFrame.
 _RDD_CHAIN_METHODS = {
-    "parallelize", "textFile", "wholeTextFiles",
-    "map", "flatMap", "reduceByKey", "groupByKey",
-    "mapPartitions", "mapValues", "sortByKey",
+    "parallelize",
+    "textFile",
+    "wholeTextFiles",
+    "map",
+    "flatMap",
+    "reduceByKey",
+    "groupByKey",
+    "mapPartitions",
+    "mapValues",
+    "sortByKey",
 }
 
 
@@ -107,9 +115,7 @@ def _find_non_spark_variables(tree: ast.AST) -> set[str]:
     return non_spark_vars
 
 
-def find_method_without_limit(
-    tree: ast.AST, method_name: str
-) -> Iterator[ast.Call]:
+def find_method_without_limit(tree: ast.AST, method_name: str) -> Iterator[ast.Call]:
     """Yield Call nodes for `something.method_name()` not preceded by `.limit()`.
 
     Skips files without pyspark imports entirely.
@@ -158,9 +164,7 @@ def find_repartition_coalesce_calls(
             yield node, n
 
 
-def find_config_set_calls(
-    tree: ast.AST, config_key: str
-) -> Iterator[ast.Call]:
+def find_config_set_calls(tree: ast.AST, config_key: str) -> Iterator[ast.Call]:
     """Yield Call nodes for `.set(config_key, ...)` or `.config(config_key, ...)`.
 
     Used by SDK014 (AQE disabled) and SDK015 (shuffle partitions).

@@ -1,4 +1,5 @@
 """Tests for SDK004 — withColumn() called inside a loop."""
+
 import ast
 
 from sparkdoctor.rules.sdk004_withcolumn_in_loop import WithColumnInLoopRule

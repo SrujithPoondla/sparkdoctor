@@ -5,6 +5,7 @@ Each .py file in tests/corpus/ is a self-contained PySpark snippet with
 - Every annotated line gets exactly the expected diagnostics (no more, no less)
 - Lines annotated ``# expect: none`` produce zero diagnostics
 """
+
 from __future__ import annotations
 
 import ast
@@ -38,18 +39,12 @@ def _run_and_check(path: Path) -> list[str]:
         # Check for missing expected diagnostics (false negatives)
         missing = expected_ids - actual_ids
         if missing:
-            failures.append(
-                f"  line {line_no}: expected {missing} but not fired\n"
-                f"    {line_text}"
-            )
+            failures.append(f"  line {line_no}: expected {missing} but not fired\n    {line_text}")
 
         # Check for unexpected diagnostics (false positives)
         unexpected = actual_ids - expected_ids
         if unexpected:
-            failures.append(
-                f"  line {line_no}: unexpected {unexpected} fired\n"
-                f"    {line_text}"
-            )
+            failures.append(f"  line {line_no}: unexpected {unexpected} fired\n    {line_text}")
 
     # Also check for diagnostics on lines with NO annotation —
     # these are potential false positives we haven't accounted for.
@@ -134,8 +129,7 @@ _MIN_NEGATIVES = 1
 def _get_builtin_rule_ids() -> set[str]:
     """Return rule IDs for built-in rules only (excludes entry-point plugins)."""
     return {
-        r.rule_id for r in _ENGINE.rules
-        if r.__class__.__module__.startswith("sparkdoctor.rules.")
+        r.rule_id for r in _ENGINE.rules if r.__class__.__module__.startswith("sparkdoctor.rules.")
     }
 
 

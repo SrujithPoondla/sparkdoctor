@@ -1,4 +1,5 @@
 """Configuration loading from pyproject.toml [tool.sparkdoctor] section."""
+
 from __future__ import annotations
 
 import logging

@@ -1,4 +1,5 @@
 """Tests for SDK014 — AQE explicitly disabled."""
+
 import ast
 
 from sparkdoctor.rules.sdk014_aqe_disabled import AqeDisabledRule

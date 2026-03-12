@@ -28,8 +28,7 @@ events = raw_events  # AQE manages partitioning automatically (Spark 3.2+)
 # ── Correct: write single file without coalesce(1) on full dataset ───────────
 TARGET_DATE = "2024-01-15"
 daily_summary = (
-    events
-    .filter(F.col("date") == TARGET_DATE)
+    events.filter(F.col("date") == TARGET_DATE)
     .groupBy("user_id")
     .agg(F.count("event_type").alias("event_count"))
 )
@@ -40,6 +39,7 @@ daily_summary.write.option("maxRecordsPerFile", 5_000_000).parquet("s3://output/
 # ── Correct: pandas_udf for vectorized execution ─────────────────────────────
 COUNTRY_MAP = {"US": "United States", "GB": "United Kingdom", "DE": "Germany"}
 
+
 @pandas_udf(returnType=StringType())
 def normalize_country(series: pd.Series) -> pd.Series:
     return series.map(lambda c: COUNTRY_MAP.get(c, c) if c else c)
@@ -48,17 +48,24 @@ def normalize_country(series: pd.Series) -> pd.Series:
 # ── Correct: use built-in for simple string transforms ───────────────────────
 # No UDF needed — F.lower() and F.trim() are built-in Spark functions.
 events = events.withColumn(
-    "device_clean",
-    F.coalesce(F.trim(F.lower(F.col("device_type"))), F.lit("unknown"))
+    "device_clean", F.coalesce(F.trim(F.lower(F.col("device_type"))), F.lit("unknown"))
 )
 
 
 # ── Correct: select() once with all column transformations ───────────────────
 BOOLEAN_FLAGS = [
-    "is_mobile", "is_premium", "has_notifications",
-    "has_2fa", "email_verified", "phone_verified",
-    "gdpr_consent", "marketing_opt_in", "beta_user",
-    "internal_user", "test_account", "churned",
+    "is_mobile",
+    "is_premium",
+    "has_notifications",
+    "has_2fa",
+    "email_verified",
+    "phone_verified",
+    "gdpr_consent",
+    "marketing_opt_in",
+    "beta_user",
+    "internal_user",
+    "test_account",
+    "churned",
 ]
 
 # One select call, not 12 withColumn calls
@@ -82,35 +89,28 @@ has_errors = len(error_sample) > 0
 # ── Correct: limit() before collect() ────────────────────────────────────────
 ACTIVE_STATUS = "active"
 active_user_ids = (
-    users
-    .filter(F.col("status") == ACTIVE_STATUS)
+    users.filter(F.col("status") == ACTIVE_STATUS)
     .select("user_id")
-    .limit(100_000)   # bounded; if you need all of them, write to storage instead
+    .limit(100_000)  # bounded; if you need all of them, write to storage instead
     .collect()
 )
 
 
 # ── Correct: cache() with corresponding unpersist() ──────────────────────────
-joined = (
-    events
-    .join(users, on="user_id", how="left")
-    .withColumn("country", normalize_country(F.col("country_code")))
+joined = events.join(users, on="user_id", how="left").withColumn(
+    "country", normalize_country(F.col("country_code"))
 )
 joined.cache()
 
 try:
-    result = (
-        joined
-        .groupBy("country", "device_clean")
-        .agg(
-            F.count("event_id").alias("total_events"),
-            F.countDistinct("user_id").alias("unique_users"),
-            F.avg("session_duration").alias("avg_session_sec"),
-        )
+    result = joined.groupBy("country", "device_clean").agg(
+        F.count("event_id").alias("total_events"),
+        F.countDistinct("user_id").alias("unique_users"),
+        F.avg("session_duration").alias("avg_session_sec"),
     )
     result.write.mode("overwrite").parquet("s3://output/summary/")
 finally:
-    joined.unpersist()   # Always release, even if write fails
+    joined.unpersist()  # Always release, even if write fails
 
 
 # ── Correct: limit() before toPandas() ───────────────────────────────────────
@@ -118,13 +118,7 @@ pandas_summary = result.limit(1000).toPandas()
 
 
 # ── Correct: DataFrame API instead of RDD ────────────────────────────────────
-country_list = (
-    joined
-    .select("country")
-    .distinct()
-    .limit(1000)
-    .collect()
-)
+country_list = joined.select("country").distinct().limit(1000).collect()
 
 
 # ── Correct: explicit join instead of crossJoin ──────────────────────────────
@@ -150,13 +144,7 @@ event_count = spark.sql("SELECT count(*) FROM events_raw")
 
 # ── Correct: collect outside a loop ──────────────────────────────────────────
 # Collect once, iterate in Python — no repeated Spark actions.
-country_data = (
-    joined
-    .select("country")
-    .distinct()
-    .limit(100)
-    .collect()
-)
+country_data = joined.select("country").distinct().limit(100).collect()
 for row in country_data:
     print(row.country)
 
@@ -164,10 +152,12 @@ for row in country_data:
 # ── Correct: explicit schema instead of inferSchema ──────────────────────────
 from pyspark.sql.types import IntegerType, StructField, StructType
 
-csv_schema = StructType([
-    StructField("id", IntegerType()),
-    StructField("name", StringType()),
-])
+csv_schema = StructType(
+    [
+        StructField("id", IntegerType()),
+        StructField("name", StringType()),
+    ]
+)
 csv_data = spark.read.schema(csv_schema).csv("s3://data-lake/uploads/raw.csv", header=True)
 
 

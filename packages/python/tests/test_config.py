@@ -38,11 +38,7 @@ def test_load_config_no_pyproject(tmp_path):
 def test_load_config_with_pyproject(tmp_path):
     """Loading config from a dir with [tool.sparkdoctor] in pyproject.toml."""
     pyproject = tmp_path / "pyproject.toml"
-    pyproject.write_text(
-        '[tool.sparkdoctor]\n'
-        'disable = ["SDK023"]\n'
-        'exclude = ["tests"]\n'
-    )
+    pyproject.write_text('[tool.sparkdoctor]\ndisable = ["SDK023"]\nexclude = ["tests"]\n')
     cfg = load_config(tmp_path)
     assert cfg.disable == {"SDK023"}
     assert cfg.exclude == ("tests",)

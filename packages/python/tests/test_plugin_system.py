@@ -1,4 +1,5 @@
 """Tests for the plugin/extensibility system."""
+
 import ast
 
 from sparkdoctor.lint.base import (
@@ -18,9 +19,7 @@ def test_all_rules_have_category():
     """Every rule must declare a category."""
     rules = get_all_rules()
     for rule in rules:
-        assert isinstance(rule.category, Category), (
-            f"{rule.rule_id} has no valid category"
-        )
+        assert isinstance(rule.category, Category), f"{rule.rule_id} has no valid category"
 
 
 def test_category_values():
@@ -39,9 +38,7 @@ def test_all_rules_have_language():
     """Every built-in rule should be 'python'."""
     rules = get_all_rules()
     for rule in rules:
-        assert rule.language == "python", (
-            f"{rule.rule_id} has unexpected language: {rule.language}"
-        )
+        assert rule.language == "python", f"{rule.rule_id} has unexpected language: {rule.language}"
 
 
 # ── api_version ────────────────────────────────────────────────────────────
@@ -117,6 +114,7 @@ def test_engine_filters_by_language():
 def test_rule_subclass_validation():
     """Rule subclass missing required attrs should raise TypeError."""
     try:
+
         class BadRule(Rule):
             rule_id = "BAD001"
             severity = Severity.ERROR

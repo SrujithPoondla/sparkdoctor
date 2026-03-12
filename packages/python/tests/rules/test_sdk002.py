@@ -1,4 +1,5 @@
 """Tests for SDK002 — collect() without a preceding limit()."""
+
 import ast
 
 from sparkdoctor.rules.sdk002_collect_without_limit import CollectWithoutLimitRule

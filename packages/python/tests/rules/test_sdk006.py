@@ -1,4 +1,5 @@
 """Tests for SDK006 — repartition(1) or coalesce(1)."""
+
 import ast
 
 from sparkdoctor.rules.sdk006_repartition_to_one import RepartitionToOneRule

@@ -3,6 +3,7 @@ SDK015 — Hardcoded spark.sql.shuffle.partitions.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast

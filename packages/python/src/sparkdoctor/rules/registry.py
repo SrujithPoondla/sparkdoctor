@@ -1,4 +1,5 @@
 """Auto-discovers and registers all Rule subclasses from local modules and entry points."""
+
 from __future__ import annotations
 
 import importlib
@@ -62,9 +63,7 @@ def get_all_parsers() -> dict[str, Parser]:
                 instance = parser_cls()
                 parsers[instance.language] = instance
             else:
-                logger.warning(
-                    "parser plugin %s is not a Parser subclass, skipping", ep.name
-                )
+                logger.warning("parser plugin %s is not a Parser subclass, skipping", ep.name)
         except Exception as exc:
             logger.warning("failed to load parser plugin %s: %s", ep.name, exc)
 

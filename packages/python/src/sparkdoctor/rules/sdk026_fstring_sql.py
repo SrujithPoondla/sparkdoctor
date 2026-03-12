@@ -3,6 +3,7 @@ SDK026 — f-string or .format() used in spark.sql() calls.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast

@@ -1,4 +1,5 @@
 """File discovery and orchestration for the lint engine."""
+
 from __future__ import annotations
 
 import fnmatch
@@ -42,10 +43,7 @@ def discover_files(
             files.extend(path.rglob(f"*{ext}"))
         files.sort()
         if exclude:
-            files = [
-                f for f in files
-                if not _matches_any(f.relative_to(path), exclude)
-            ]
+            files = [f for f in files if not _matches_any(f.relative_to(path), exclude)]
         return files
     return []
 

@@ -1,4 +1,5 @@
 """Tests for SDK005 — Python UDF without Arrow optimization."""
+
 import ast
 
 from sparkdoctor.rules.sdk005_python_udf import PythonUdfRule

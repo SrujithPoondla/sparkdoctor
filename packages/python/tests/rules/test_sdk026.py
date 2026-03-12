@@ -1,4 +1,5 @@
 """Tests for SDK026 — f-string or .format() in spark.sql()."""
+
 import ast
 
 from sparkdoctor.rules.sdk026_fstring_sql import FStringSqlRule

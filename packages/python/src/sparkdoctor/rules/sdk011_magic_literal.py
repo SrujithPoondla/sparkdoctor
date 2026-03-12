@@ -3,6 +3,7 @@ SDK011 — Magic literal in filter/when condition.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast
@@ -80,9 +81,7 @@ class MagicLiteralRule(Rule):
                         excluded.add(id(a))
         return excluded
 
-    def _find_magic_constants(
-        self, node: ast.AST, col_ref_ids: set[int]
-    ) -> list[ast.Constant]:
+    def _find_magic_constants(self, node: ast.AST, col_ref_ids: set[int]) -> list[ast.Constant]:
         results = []
         for child in ast.walk(node):
             if not isinstance(child, ast.Constant):

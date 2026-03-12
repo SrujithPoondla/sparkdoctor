@@ -1,4 +1,5 @@
 """Lint engine: loads rules and runs them against an AST."""
+
 from __future__ import annotations
 
 import ast
@@ -63,9 +64,7 @@ def _parse_noqa_comments(source_lines: list[str]) -> dict[int, set[str] | None]:
     return result
 
 
-def _is_suppressed(
-    diag: Diagnostic, noqa_map: dict[int, set[str] | None]
-) -> bool:
+def _is_suppressed(diag: Diagnostic, noqa_map: dict[int, set[str] | None]) -> bool:
     """Return True if the diagnostic is suppressed by a noqa comment."""
     if diag.line not in noqa_map:
         return False

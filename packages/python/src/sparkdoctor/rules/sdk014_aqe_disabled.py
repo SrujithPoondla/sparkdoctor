@@ -3,6 +3,7 @@ SDK014 — AQE explicitly disabled.
 
 Severity: WARNING
 """
+
 from __future__ import annotations
 
 import ast
