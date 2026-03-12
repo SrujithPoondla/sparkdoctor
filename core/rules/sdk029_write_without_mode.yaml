@@ -1,0 +1,17 @@
+rule_id: SDK029
+title: "DataFrame write without explicit mode"
+severity: warning
+category: correctness
+languages: [python, scala, java]
+explanation: >-
+  Writing a DataFrame without specifying .mode() defaults to
+  "errorifexists", which throws an AnalysisException if the target
+  path or table already exists. This is the most common cause of
+  pipeline failures on re-runs and in scheduled jobs.
+suggestion: >-
+  Always specify an explicit write mode:
+
+    df.write.mode("overwrite").parquet(path)
+    df.write.mode("append").format("delta").save(path)
+
+  Common modes: "overwrite", "append", "ignore", "errorifexists".
