@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sparkdoctor"
+version = "0.1.7"
+description = "A Spark linter — catches performance, correctness, and style issues before they reach your cluster"
+readme = "../../README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+keywords = ["pyspark", "spark", "linter", "performance", "data-engineering"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "typer>=0.9",
+    "rich>=13.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+sparkdoctor = "sparkdoctor.cli.main:app"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/SrujithPoondla/sparkdoctor"
+Repository = "https://github.com/SrujithPoondla/sparkdoctor"
+Issues = "https://github.com/SrujithPoondla/sparkdoctor/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "B008",   # function call in default arg (required by typer)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/sparkdoctor/cli/main.py" = ["UP045"]  # typer evaluates type hints at runtime
+"tests/fixtures/*" = ["E402"]  # test fixtures have intentional import ordering
+"tests/corpus/*" = ["E402", "E501", "F401", "I001", "B007"]  # corpus files are realistic PySpark snippets
+
+[tool.ruff.lint.isort]
+known-first-party = ["sparkdoctor"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sparkdoctor"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/sparkdoctor", "../../core"]

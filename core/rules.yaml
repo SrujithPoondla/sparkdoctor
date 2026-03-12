@@ -1,0 +1,465 @@
+# SparkDoctor Rule Definitions
+# Single source of truth for rule metadata across all language implementations.
+#
+# Fields:
+#   rule_id:      Unique identifier (e.g. SDK001)
+#   title:        Short human-readable title
+#   severity:     error | warning | info
+#   category:     performance | correctness | style
+#   languages:    List of supported languages [python, scala, java]
+#   explanation:  Why this is a problem (string = shared, map = per-language)
+#   suggestion:   How to fix it (string = shared, map = per-language)
+
+rules:
+  SDK001:
+    title: "Hardcoded repartition count"
+    severity: warning
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      Partition counts hardcoded at development time become wrong as data grows.
+      A job tuned for 50 GB creates undersized or oversized partitions when data
+      changes. The count that was optimal last month may cause spill to disk or
+      underutilization today.
+    suggestion: >-
+      Remove the hardcoded count and let AQE manage partitioning automatically
+      (requires spark.sql.adaptive.enabled=true, which is the default in Spark 3.2+).
+      If you need explicit control, derive the count from data size:
+
+        num_partitions = max(df.rdd.getNumPartitions(), estimated_rows // 1_000_000)
+
+  SDK002:
+    title: "collect() without a preceding limit()"
+    severity: warning
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      collect() moves the entire DataFrame to the driver. On a large dataset
+      this causes driver OOM, long GC pauses, and job failure. There is no
+      automatic protection — Spark will attempt to transfer all rows regardless
+      of size.
+    suggestion: >-
+      Add .limit(N) before .collect() to bound the result:
+
+        df.limit(10_000).collect()
+
+      If you genuinely need all rows on the driver, use .toPandas() on a sampled
+      subset, or write to storage and read locally.
+
+  SDK003:
+    title: "count() used as an emptiness check"
+    severity: warning
+    category: style
+    languages: [python, scala, java]
+    explanation: >-
+      count() forces a full scan of the entire dataset to return a single number.
+      Using it to answer a yes/no question (is this DataFrame empty?) wastes all
+      that compute. On a 10 TB table, you scan 10 TB to learn the answer is "no".
+    suggestion: >-
+      Use isEmpty() or limit(1) instead:
+
+        if df.isEmpty():          # short-circuits after finding the first row
+            ...
+        if df.limit(1).count() == 0:   # scans at most 1 row
+            ...
+
+      Note: isEmpty() is available in Spark 2.4+.
+
+  SDK004:
+    title: "withColumn() called inside a loop"
+    severity: error
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      Every withColumn() call creates a new DataFrame and adds one projection to
+      the query plan. Calling it in a loop with 50 columns creates 50 nested
+      projections. Spark's query plan analyzer must process all 50, causing O(N²)
+      plan compilation time. At 100+ columns this can take minutes before the job
+      even starts.
+    suggestion: >-
+      Collect all column transformations into a list and call select() once:
+
+        from pyspark.sql import functions as F
+        new_cols = [F.col(c).cast("string").alias(c) for c in columns]
+        df = df.select("*", *new_cols)
+
+  SDK005:
+    title: "Python UDF without Arrow optimization"
+    severity: warning
+    category: performance
+    languages: [python]
+    explanation: >-
+      Python UDFs serialize each row to Python, execute Python, then deserialize
+      back to JVM. This row-at-a-time serialization overhead can make a UDF
+      10-100x slower than an equivalent Spark built-in function. Catalyst cannot
+      optimize through UDFs, so query plans are less efficient.
+    suggestion: >-
+      First check if a Spark built-in function covers your use case (functions in
+      pyspark.sql.functions cover most common transformations).
+      If a custom function is necessary, use pandas_udf for vectorized execution:
+
+        from pyspark.sql.functions import pandas_udf
+        @pandas_udf(returnType=StringType())
+        def my_func(x: pd.Series) -> pd.Series:
+            return x.str.upper()
+
+  SDK006:
+    title: "repartition(1) or coalesce(1) — forces single-partition execution"
+    severity: error
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      repartition(1) or coalesce(1) collapses the entire distributed dataset into
+      a single partition, processed by a single executor core. This eliminates all
+      parallelism. On a 100 GB dataset, one task processes all 100 GB sequentially.
+      Memory pressure causes spill to disk. Runtime scales linearly with data size.
+    suggestion: >-
+      If you need to write a single output file:
+
+        df.write.option("maxRecordsPerFile", 1_000_000).parquet(path)
+        # or
+        df.coalesce(1).write.parquet(path)  # acceptable only for small DataFrames < 1 GB
+
+      If you genuinely need one partition for downstream logic, document why
+      explicitly. Most cases that use repartition(1) in production should not.
+
+  SDK007:
+    title: "cache()/persist() without unpersist()"
+    severity: info
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      Spark holds cached DataFrames in executor memory (and optionally disk) until
+      explicitly released or the SparkSession ends. In long-running jobs or
+      notebooks, forgetting unpersist() accumulates cached data, consuming memory
+      that other operations need and potentially causing executor OOM.
+    suggestion: >-
+      Release cached DataFrames when they are no longer needed:
+
+        df.cache()
+        # ... operations that benefit from the cache ...
+        df.unpersist()
+
+      In notebooks or long jobs, use a try/finally pattern:
+
+        df.cache()
+        try:
+            process(df)
+        finally:
+            df.unpersist()
+
+  SDK008:
+    title: "Cross-DataFrame column reference"
+    severity: warning
+    category: correctness
+    languages: [python, scala, java]
+    explanation: >-
+      Referencing a column as df1.colA inside df2.select() can cause
+      AnalysisException at runtime when the DataFrames come from different
+      lineages. Spark resolves the column against df1's plan, not df2's.
+    suggestion: >-
+      Use string column names or F.col() instead of DataFrame attribute access.
+
+        # Bad:  df2.select(df1.colA)
+        # Good: df2.select("colA")  or  df2.select(F.col("colA"))
+
+  SDK009:
+    title: "Long transformation chain without intermediate assignment"
+    severity: info
+    category: style
+    languages: [python, scala, java]
+    explanation: >-
+      Long method chains are hard to debug because there is no intermediate
+      variable to inspect, hard to extract into reusable functions, and hide
+      logical groupings. Palantir recommends max 3-5 lines of chaining.
+    suggestion: >-
+      Break the chain into named intermediate steps of 4-5 calls each.
+
+        # Bad:  df.filter().withColumn().groupBy().agg().filter().orderBy().limit()
+        # Good: filtered = df.filter().withColumn()
+        #        result = filtered.groupBy().agg().filter().orderBy().limit()
+
+  SDK011:
+    title: "Magic literal in filter/when condition"
+    severity: warning
+    category: style
+    languages: [python, scala, java]
+    explanation: >-
+      Magic literals make code brittle and opaque. When a threshold or status
+      value changes, the developer must find every occurrence. Named constants
+      centralize business logic and make code self-documenting.
+    suggestion: >-
+      Extract the literal to a named constant.
+
+        # Bad:  df.filter(F.col("status") == "active")
+        # Good: ACTIVE_STATUS = "active"
+        #        df.filter(F.col("status") == ACTIVE_STATUS)
+
+  SDK012:
+    title: "toPandas() without a preceding limit()"
+    severity: error
+    category: performance
+    languages: [python]
+    explanation: >-
+      toPandas() collects ALL rows from ALL executors to the driver in a single
+      operation. On a large DataFrame this causes driver OOM, interrupts
+      concurrent readers, and can corrupt downstream state. There is no automatic
+      size guard.
+    suggestion: >-
+      Add .limit(N) before .toPandas() to bound the result:
+
+        pandas_df = spark_df.limit(10_000).toPandas()
+
+      If you genuinely need the full result as pandas, write to storage first
+      and read with pandas locally.
+
+  SDK013:
+    title: "RDD API used on DataFrame"
+    severity: error
+    category: performance
+    languages: [python]
+    explanation: >-
+      The RDD API forces Spark to serialize every row through Python's pickle
+      format — 10-100x slower than DataFrame operations that stay in the JVM.
+      Catalyst cannot optimize through RDD operations, so query plans are less
+      efficient and Tungsten memory management is bypassed.
+    suggestion: >-
+      Replace RDD operations with DataFrame API equivalents:
+
+        # Instead of: df.rdd.map(lambda row: ...)
+        df.withColumn("new_col", F.col("value") * 2)
+
+      If you need partition-level Python, use mapInPandas (Arrow-backed):
+
+        df.mapInPandas(transform_fn, schema=output_schema)
+
+  SDK014:
+    title: "AQE explicitly disabled"
+    severity: warning
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      Adaptive Query Execution (AQE) dynamically optimizes shuffle partitions,
+      converts sort-merge joins to broadcast joins, and handles skewed joins.
+      Disabling it removes these automatic optimizations and forces static query
+      planning that can't adapt to actual data characteristics.
+    suggestion: >-
+      Remove the spark.sql.adaptive.enabled=false setting. AQE is enabled by
+      default in Spark 3.2+ and provides significant performance improvements
+      with no downside for most workloads. If you disabled it to work around a
+      specific bug, check if the bug is fixed in your current Spark version.
+
+  SDK015:
+    title: "Hardcoded spark.sql.shuffle.partitions"
+    severity: warning
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      Setting spark.sql.shuffle.partitions to a fixed value (commonly 200, the
+      old default) overrides AQE's ability to dynamically size shuffle partitions.
+      A count tuned for one data size becomes wrong as data grows or shrinks.
+    suggestion: >-
+      Remove the hardcoded setting and let AQE handle it automatically
+      (spark.sql.adaptive.enabled=true is the default in Spark 3.2+). AQE will
+      coalesce small partitions and split large ones at runtime.
+      If you must set it, derive from data size rather than hardcoding.
+
+  SDK016:
+    title: "crossJoin() produces a cartesian product"
+    severity: warning
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      A cross join of two tables produces N * M rows. Two 1M-row tables produce
+      1 trillion rows. This is rarely intentional and will exhaust cluster memory
+      silently — Spark will not warn you. Most accidental cross joins come from
+      missing join conditions.
+    suggestion: >-
+      If the cross join is intentional (e.g. salting), ensure the right side is
+      small and broadcast it:
+
+        salted = left_df.crossJoin(F.broadcast(small_df))
+
+      If unintentional, add a proper join condition:
+
+        result = left.join(right, on="key", how="inner")
+
+  SDK017:
+    title: "select(\"*\") reads all columns"
+    severity: warning
+    category: style
+    languages: [python, scala, java]
+    explanation: >-
+      select('*') reads every column from the source, defeating column pruning.
+      On wide tables (hundreds of columns) or columnar formats (Parquet, ORC),
+      this reads far more data than needed and wastes I/O, memory, and shuffle
+      bytes.
+    suggestion: >-
+      List only the columns you need:
+
+        df.select('user_id', 'event_type', 'timestamp')
+
+      If you truly need all columns, use the DataFrame directly without select.
+
+  SDK018:
+    title: "Inconsistent column reference style"
+    severity: info
+    category: style
+    languages: [python]
+    explanation: >-
+      Mixing F.col(), df["col"], and df.col styles in the same file creates
+      cognitive overhead during code review. df.col is particularly risky because
+      it looks like a Python attribute and may silently produce Column objects that
+      cause AnalysisExceptions.
+    suggestion: >-
+      Pick one column reference style and use it consistently.
+      Recommended: F.col() or string literals for Spark 3.0+.
+
+        df.select(F.col("name"), F.col("age"))  # consistent F.col()
+        df.select("name", "age")                 # consistent string
+
+  SDK019:
+    title: "inferSchema=True in production read"
+    severity: warning
+    category: correctness
+    languages: [python, scala, java]
+    explanation: >-
+      inferSchema requires an extra pass over the entire dataset to determine
+      column types. On large files this doubles read time. It also produces
+      unstable schemas — a column that looks like integers today may become
+      strings tomorrow if one value has a decimal point.
+    suggestion: >-
+      Define an explicit StructType schema and pass it to .schema():
+
+        schema = StructType([StructField('id', IntegerType()), ...])
+        df = spark.read.schema(schema).csv('path')
+
+      This is faster (single pass) and ensures consistent types across runs.
+
+  SDK020:
+    title: "DROP TABLE or fs.rm before overwrite write"
+    severity: info
+    category: correctness
+    languages: [python, scala, java]
+    explanation: >-
+      Manually deleting or dropping a table before writing with overwrite mode
+      loses Delta time-travel history, interrupts concurrent readers (no
+      atomicity), and removes table metadata and ACLs. Delta's overwrite mode
+      is atomic — readers see either the old version or the new version, never
+      partial state.
+    suggestion: >-
+      Use overwrite mode directly without manual deletion.
+
+        # Bad:  spark.sql("DROP TABLE ..."); df.write.mode("overwrite").save()
+        # Good: df.write.mode("overwrite").save(path)
+        # For schema changes: .option("overwriteSchema", "true")
+
+  SDK023:
+    title: "show() left in production code"
+    severity: info
+    category: style
+    languages: [python, scala, java]
+    explanation: >-
+      Each .show() call triggers a Spark action — a full job execution that
+      materializes the DataFrame and pulls rows to the driver. A pipeline with
+      multiple show() calls left in production runs extra jobs before the actual
+      work begins, wasting compute and adding latency.
+    suggestion: >-
+      Remove .show() calls from production code, or suppress with # noqa: SDK023
+      if intentional.
+      For logging, use:
+
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Row count: {df.count()}")
+
+  SDK024:
+    title: "Streaming read without explicit schema"
+    severity: info
+    category: correctness
+    languages: [python, scala, java]
+    explanation: >-
+      Streaming jobs run indefinitely. A schema inferred at startup will break
+      when the source schema changes, causing the stream to fail silently or
+      corrupt data. Explicit schemas also prevent Spark from doing a schema
+      inference scan at startup which adds latency.
+    suggestion: >-
+      Define an explicit schema for streaming reads.
+
+        # Bad:  spark.readStream.format("json").load(path)
+        # Good: spark.readStream.schema(my_schema).format("json").load(path)
+
+  SDK025:
+    title: "union() matches columns by position, not by name"
+    severity: warning
+    category: correctness
+    languages: [python, scala, java]
+    explanation: >-
+      union() matches columns by ordinal position, not by name. If the two
+      DataFrames have the same columns in different order, data silently ends up
+      in the wrong column. This is a common source of data corruption that passes
+      all type checks when column types happen to match.
+    suggestion: >-
+      Use unionByName() instead — it matches columns by name:
+
+        result = df1.unionByName(df2)
+
+      If schemas may differ, use allowMissingColumns:
+
+        result = df1.unionByName(df2, allowMissingColumns=True)
+
+  SDK026:
+    title: "Dynamic string in spark.sql() — SQL injection risk"
+    severity: warning
+    category: correctness
+    languages: [python, scala, java]
+    explanation: >-
+      Using f-strings or .format() to build SQL queries prevents Catalyst from
+      caching query plans (each interpolated string is a unique query) and creates
+      a SQL injection risk if any interpolated value comes from user input or
+      external configuration.
+    suggestion: >-
+      Use parameterized queries or DataFrame API instead:
+
+        # Instead of: spark.sql(f"SELECT * FROM {table}")
+        spark.table(table_name).select("*")
+        # For filtering with variables:
+        df.filter(F.col("status") == status_var)
+
+      If you must use spark.sql(), use parameter markers (Spark 3.4+):
+
+        spark.sql("SELECT * FROM t WHERE id = :id", args={"id": my_id})
+
+  SDK027:
+    title: "orderBy()/sort() before write is wasteful"
+    severity: warning
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      orderBy() and sort() trigger a full global sort (shuffle + sort), which is
+      one of the most expensive Spark operations. When writing to storage, the
+      sort order is only preserved within each partition file — readers don't see
+      a globally sorted dataset. The expensive sort is wasted.
+    suggestion: >-
+      If you need sorted output files for read performance, use
+      sortWithinPartitions():
+
+        df.sortWithinPartitions('date').write.parquet('path')
+
+      This sorts within each partition (no global shuffle) and achieves the same
+      benefit for predicate pushdown and min/max pruning.
+      If you truly need global order, collect the results instead of writing.
+
+  SDK031:
+    title: "collect() or toPandas() inside a loop"
+    severity: error
+    category: performance
+    languages: [python, scala, java]
+    explanation: >-
+      Calling collect() or toPandas() inside a loop triggers a full Spark action
+      on every iteration, pulling data to the driver repeatedly. This causes
+      O(N) full-dataset scans and can OOM the driver on any iteration.
+    suggestion: >-
+      Collect the data once before the loop, or restructure the logic to use
+      DataFrame operations (groupBy, pivot, window functions) instead of
+      iterating and collecting per-group.
