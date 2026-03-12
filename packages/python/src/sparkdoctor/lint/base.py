@@ -67,13 +67,26 @@ _rules_spec: dict[str, dict] | None = None
 
 
 def _find_rules_dir() -> Path | None:
-    """Walk up from this file to find core/rules/ directory."""
+    """Find the core/rules/ directory containing per-rule YAML files.
+
+    Searches two locations:
+    1. Walk up from this file (works in dev/editable installs and monorepo)
+    2. Inside the installed package (works for pip install from PyPI)
+    """
+    # 1. Walk up from this file to find core/rules/ in the repo
     current = Path(__file__).resolve().parent
     for _ in range(10):
         candidate = current / "core" / "rules"
         if candidate.is_dir():
             return candidate
         current = current.parent
+
+    # 2. Check inside the installed package (wheel bundles core/rules/ here)
+    pkg_dir = Path(__file__).resolve().parent.parent  # sparkdoctor/
+    candidate = pkg_dir / "core" / "rules"
+    if candidate.is_dir():
+        return candidate
+
     return None
 
 
@@ -163,7 +176,7 @@ class Rule(ABC):
 
     Subclasses only need to define ``rule_id`` and ``check()``.
     Metadata (severity, title, category, explanation, suggestion) is loaded
-    automatically from ``core/rules.yaml``.
+    automatically from ``core/rules/*.yaml``.
 
     Attributes:
         rule_id: Unique identifier (e.g. "SDK001").
@@ -199,11 +212,23 @@ class Rule(ABC):
         if spec:
             lang = getattr(cls, "language", "python")
             if not hasattr(cls, "severity") or cls.__dict__.get("severity") is None:
-                cls.severity = _SEVERITY_MAP[spec["severity"]]
+                raw_sev = spec.get("severity", "")
+                if raw_sev not in _SEVERITY_MAP:
+                    raise ValueError(
+                        f"Invalid severity '{raw_sev}' in YAML for {rule_id}. "
+                        f"Must be one of: {', '.join(_SEVERITY_MAP)}"
+                    )
+                cls.severity = _SEVERITY_MAP[raw_sev]
             if not hasattr(cls, "title") or cls.__dict__.get("title") is None:
                 cls.title = spec["title"]
             if "category" not in cls.__dict__:
-                cls.category = _CATEGORY_MAP[spec["category"]]
+                raw_cat = spec.get("category", "")
+                if raw_cat not in _CATEGORY_MAP:
+                    raise ValueError(
+                        f"Invalid category '{raw_cat}' in YAML for {rule_id}. "
+                        f"Must be one of: {', '.join(_CATEGORY_MAP)}"
+                    )
+                cls.category = _CATEGORY_MAP[raw_cat]
             if "_EXPLANATION" not in cls.__dict__:
                 cls._EXPLANATION = _resolve_text(spec.get("explanation", ""), lang)
             if "_SUGGESTION" not in cls.__dict__:

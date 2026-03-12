@@ -4,10 +4,15 @@ severity: warning
 category: performance
 languages: [python, scala, java]
 explanation: >-
-  orderBy() and sort() trigger a full global sort (shuffle + sort), which is one of the most expensive Spark operations. When writing to storage, the sort order is only preserved within each partition file — readers don't see a globally sorted dataset. The expensive sort is wasted.
+  orderBy() and sort() trigger a full global sort (shuffle + sort), which is
+  one of the most expensive Spark operations. When writing to storage, the
+  sort order is only preserved within each partition file — readers don't see
+  a globally sorted dataset. The expensive sort is wasted.
 suggestion: >-
-  If you need sorted output files for read performance, use sortWithinPartitions():
+  If you need sorted output files for read performance, use
+  sortWithinPartitions():
 
-  df.sortWithinPartitions('date').write.parquet('path')
+    df.sortWithinPartitions("date").write.parquet("path")
 
-  This sorts within each partition (no global shuffle) and achieves the same benefit for predicate pushdown and min/max pruning. If you truly need global order, collect the results instead of writing.
+  This sorts within each partition (no global shuffle) and achieves the same
+  benefit for predicate pushdown and min/max pruning.

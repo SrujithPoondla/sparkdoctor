@@ -4,12 +4,15 @@ severity: error
 category: performance
 languages: [python, scala, java]
 explanation: >-
-  repartition(1) or coalesce(1) collapses the entire distributed dataset into a single partition, processed by a single executor core. This eliminates all parallelism. On a 100 GB dataset, one task processes all 100 GB sequentially. Memory pressure causes spill to disk. Runtime scales linearly with data size.
+  repartition(1) or coalesce(1) collapses the entire distributed dataset into
+  a single partition, processed by a single executor core. This eliminates all
+  parallelism. On a 100 GB dataset, one task processes all 100 GB sequentially.
+  Memory pressure causes spill to disk. Runtime scales linearly with data size.
 suggestion: >-
-  If you need to write a single output file:
+  If you need to write a single output file, use maxRecordsPerFile:
 
-  df.write.option("maxRecordsPerFile", 1_000_000).parquet(path)
-  # or
-  df.coalesce(1).write.parquet(path)  # acceptable only for small DataFrames < 1 GB
+    df.write.option("maxRecordsPerFile", 1000000).parquet(path)
 
-  If you genuinely need one partition for downstream logic, document why explicitly. Most cases that use repartition(1) in production should not.
+  coalesce(1) is acceptable only for small DataFrames under 1 GB.
+  If you genuinely need one partition for downstream logic, document why
+  explicitly. Most cases that use repartition(1) in production should not.

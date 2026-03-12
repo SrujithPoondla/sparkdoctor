@@ -75,5 +75,8 @@ known-first-party = ["sparkdoctor"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/sparkdoctor"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"../../core/rules" = "sparkdoctor/core/rules"
+
 [tool.hatch.build.targets.sdist]
 include = ["src/sparkdoctor", "../../core"]
