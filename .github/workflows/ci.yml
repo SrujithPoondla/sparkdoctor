@@ -40,5 +40,5 @@ jobs:
       - name: Self-lint
         run: sparkdoctor lint src/sparkdoctor/ --exit-code --severity error
 
-      - name: Validate rules.yaml
-        run: python -c "import yaml; data = yaml.safe_load(open('../../core/rules.yaml')); assert len(data['rules']) >= 25, f'Expected 25+ rules, got {len(data[\"rules\"])}'"
+      - name: Validate rule definitions
+        run: python -c "from pathlib import Path; files = list(Path('../../core/rules').glob('*.yaml')); assert len(files) >= 25, f'Expected 25+ rule files, got {len(files)}'"
