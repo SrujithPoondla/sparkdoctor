@@ -1,0 +1,16 @@
+rule_id: SDK004
+title: "withColumn() called inside a loop"
+severity: error
+category: performance
+languages: [python, scala, java]
+explanation: >-
+  Every withColumn() call creates a new DataFrame and adds one projection to
+  the query plan. Calling it in a loop with 50 columns creates 50 nested
+  projections. Spark's query plan analyzer must process all 50, causing O(N²)
+  plan compilation time. At 100+ columns this can take minutes before the job
+  even starts.
+suggestion: >-
+  Build all column expressions and apply them in a single select() call:
+
+    new_cols = [F.col(c).cast("string").alias(c) for c in columns]
+    df = df.select([F.col(c) for c in df.columns] + new_cols)

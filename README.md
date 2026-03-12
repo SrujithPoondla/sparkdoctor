@@ -269,13 +269,17 @@ No engine knowledge needed. Check the issues tab for rule candidates.
 
 **v0.1.x** — Static linter: rules, CLI, inline suppression (current)
 
-**v0.2.0** — Metadata profiler: read Delta logs, Parquet footers, and Iceberg manifests
+**v0.2.0** — Scala support via [scalameta](https://scalameta.org/) + sbt plugin
+
+**v0.3.0** — Java support via [JavaParser](https://javaparser.org/) + Maven/Gradle plugins
+
+**v0.4.0** — Metadata profiler: read Delta logs, Parquet footers, and Iceberg manifests
 to generate config recommendations without running a job.
 
-**v0.3.0** — Config advisor: given data profile + target platform, output specific
+**v0.5.0** — Config advisor: given data profile + target platform, output specific
 configuration for EMR, Glue, Dataproc, and Databricks.
 
-**v0.4.0** — Migration advisor: detect jobs that don't need Spark and suggest
+**v0.6.0** — Migration advisor: detect jobs that don't need Spark and suggest
 DuckDB or Polars equivalents.
 
 ---

@@ -1,0 +1,24 @@
+rule_id: SDK007
+title: "cache()/persist() without unpersist()"
+severity: info
+category: performance
+languages: [python, scala, java]
+explanation: >-
+  Spark holds cached DataFrames in executor memory (and optionally disk) until
+  explicitly released or the SparkSession ends. In long-running jobs or
+  notebooks, forgetting unpersist() accumulates cached data, consuming memory
+  that other operations need and potentially causing executor OOM.
+suggestion: >-
+  Release cached DataFrames when they are no longer needed:
+
+    df.cache()
+    # ... operations that benefit from the cache ...
+    df.unpersist()
+
+  In notebooks or long jobs, use a try/finally pattern:
+
+    df.cache()
+    try:
+        process(df)
+    finally:
+        df.unpersist()

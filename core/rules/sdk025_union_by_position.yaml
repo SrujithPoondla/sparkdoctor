@@ -1,0 +1,15 @@
+rule_id: SDK025
+title: "union() matches columns by position, not by name"
+severity: warning
+category: correctness
+languages: [python, scala, java]
+explanation: >-
+  union() matches columns by ordinal position, not by name. If the two DataFrames have the same columns in different order, data silently ends up in the wrong column. This is a common source of data corruption that passes all type checks when column types happen to match.
+suggestion: >-
+  Use unionByName() instead — it matches columns by name:
+
+  result = df1.unionByName(df2)
+
+  If schemas may differ, use allowMissingColumns:
+
+  result = df1.unionByName(df2, allowMissingColumns=True)

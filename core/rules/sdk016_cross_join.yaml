@@ -1,0 +1,16 @@
+rule_id: SDK016
+title: "crossJoin() produces a cartesian product"
+severity: warning
+category: performance
+languages: [python, scala, java]
+explanation: >-
+  A cross join of two tables produces N * M rows. Two 1M-row tables produce 1 trillion rows. This is rarely intentional and will exhaust cluster memory silently — Spark will not warn you. Most accidental cross joins come from missing join conditions.
+suggestion: >-
+  If the cross join is intentional (e.g. salting), ensure the right side is
+  small and broadcast it:
+
+    salted = left_df.crossJoin(broadcast(small_df))
+
+  If unintentional, add a proper join condition:
+
+    result = left.join(right, on="key", how="inner")

@@ -1,0 +1,14 @@
+rule_id: SDK019
+title: "inferSchema=True in production read"
+severity: warning
+category: correctness
+languages: [python, scala, java]
+explanation: >-
+  inferSchema requires an extra pass over the entire dataset to determine column types. On large files this doubles read time. It also produces unstable schemas — a column that looks like integers today may become strings tomorrow if one value has a decimal point.
+suggestion: >-
+  Define an explicit StructType schema and pass it to .schema():
+
+  schema = StructType([StructField('id', IntegerType()), ...])
+  df = spark.read.schema(schema).csv('path')
+
+  This is faster (single pass) and ensures consistent types across runs.

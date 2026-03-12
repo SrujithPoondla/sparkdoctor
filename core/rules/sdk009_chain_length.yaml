@@ -1,0 +1,13 @@
+rule_id: SDK009
+title: "Long transformation chain without intermediate assignment"
+severity: info
+category: style
+languages: [python, scala, java]
+explanation: >-
+  Long method chains are hard to debug because there is no intermediate variable to inspect, hard to extract into reusable functions, and hide logical groupings. Palantir recommends max 3-5 lines of chaining.
+suggestion: >-
+  Break the chain into named intermediate steps of 4-5 calls each.
+
+  # Bad:  df.filter().withColumn().groupBy().agg().filter().orderBy().limit()
+  # Good: filtered = df.filter().withColumn()
+  #        result = filtered.groupBy().agg().filter().orderBy().limit()

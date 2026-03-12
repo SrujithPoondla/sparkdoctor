@@ -1,0 +1,17 @@
+rule_id: SDK026
+title: "Dynamic string in spark.sql() — SQL injection risk"
+severity: warning
+category: correctness
+languages: [python, scala, java]
+explanation: >-
+  Using string interpolation to build SQL queries prevents Catalyst from
+  caching query plans (each interpolated string is a unique query) and creates
+  a SQL injection risk if any interpolated value comes from user input or
+  external configuration.
+suggestion: >-
+  Use the DataFrame API instead of interpolating SQL text:
+
+    spark.table(tableName).filter(col("status") === statusVar)
+
+  If you must use spark.sql(), use parameter markers (Spark 3.4+)
+  to separate query structure from values.

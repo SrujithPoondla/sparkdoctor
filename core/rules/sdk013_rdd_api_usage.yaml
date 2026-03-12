@@ -1,0 +1,16 @@
+rule_id: SDK013
+title: "RDD API used on DataFrame"
+severity: error
+category: performance
+languages: [python]
+explanation: >-
+  The RDD API forces Spark to serialize every row through Python's pickle format — 10-100x slower than DataFrame operations that stay in the JVM. Catalyst cannot optimize through RDD operations, so query plans are less efficient and Tungsten memory management is bypassed.
+suggestion: >-
+  Replace RDD operations with DataFrame API equivalents:
+
+  # Instead of: df.rdd.map(lambda row: ...)
+  df.withColumn("new_col", F.col("value") * 2)
+
+  If you need partition-level Python, use mapInPandas (Arrow-backed):
+
+  df.mapInPandas(transform_fn, schema=output_schema)

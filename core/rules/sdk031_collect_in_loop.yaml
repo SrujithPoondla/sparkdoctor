@@ -1,0 +1,13 @@
+rule_id: SDK031
+title: "collect() or toPandas() inside a loop"
+severity: error
+category: performance
+languages: [python, scala, java]
+explanation: >-
+  Calling collect() or toPandas() inside a loop triggers a full Spark action
+  on every iteration, pulling data to the driver repeatedly. This causes O(N)
+  full-dataset scans and can OOM the driver on any iteration.
+suggestion: >-
+  Collect the data once before the loop, or restructure the logic to use
+  DataFrame operations (groupBy, pivot, window functions) instead of iterating
+  and collecting per-group. Note: toPandas() is Python-specific.

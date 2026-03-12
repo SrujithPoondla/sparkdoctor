@@ -1,0 +1,19 @@
+rule_id: SDK005
+title: "Python UDF without Arrow optimization"
+severity: warning
+category: performance
+languages: [python]
+explanation: >-
+  Python UDFs serialize each row to Python, execute Python, then deserialize
+  back to JVM. This row-at-a-time serialization overhead can make a UDF
+  10-100x slower than an equivalent Spark built-in function. Catalyst cannot
+  optimize through UDFs, so query plans are less efficient.
+suggestion: >-
+  First check if a Spark built-in function covers your use case (functions in
+  pyspark.sql.functions cover most common transformations).
+  If a custom function is necessary, use pandas_udf for vectorized execution:
+
+    from pyspark.sql.functions import pandas_udf
+    @pandas_udf(returnType=StringType())
+    def my_func(x: pd.Series) -> pd.Series:
+        return x.str.upper()

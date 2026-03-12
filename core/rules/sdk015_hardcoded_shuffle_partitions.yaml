@@ -1,0 +1,9 @@
+rule_id: SDK015
+title: "Hardcoded spark.sql.shuffle.partitions"
+severity: warning
+category: performance
+languages: [python, scala, java]
+explanation: >-
+  Setting spark.sql.shuffle.partitions to a fixed value (commonly 200, the old default) overrides AQE's ability to dynamically size shuffle partitions. A count tuned for one data size becomes wrong as data grows or shrinks.
+suggestion: >-
+  Remove the hardcoded setting and let AQE handle it automatically (spark.sql.adaptive.enabled=true is the default in Spark 3.2+). AQE will coalesce small partitions and split large ones at runtime. If you must set it, derive from data size rather than hardcoding.

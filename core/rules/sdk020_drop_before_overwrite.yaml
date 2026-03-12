@@ -1,0 +1,13 @@
+rule_id: SDK020
+title: "DROP TABLE or fs.rm before overwrite write"
+severity: info
+category: correctness
+languages: [python, scala, java]
+explanation: >-
+  Manually deleting or dropping a table before writing with overwrite mode loses Delta time-travel history, interrupts concurrent readers (no atomicity), and removes table metadata and ACLs. Delta's overwrite mode is atomic — readers see either the old version or the new version, never partial state.
+suggestion: >-
+  Use overwrite mode directly without manual deletion.
+
+  # Bad:  spark.sql("DROP TABLE ..."); df.write.mode("overwrite").save()
+  # Good: df.write.mode("overwrite").save(path)
+  # For schema changes: .option("overwriteSchema", "true")
