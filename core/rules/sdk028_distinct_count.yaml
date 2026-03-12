@@ -1,0 +1,18 @@
+rule_id: SDK028
+title: "distinct().count() is a two-pass operation"
+severity: warning
+category: performance
+languages: [python, scala, java]
+explanation: >-
+  distinct().count() forces Spark to execute two passes: a full shuffle to
+  deduplicate rows, then a second action to count the result. This is
+  significantly more expensive than using countDistinct() or
+  approx_count_distinct(), which combine both operations into a single
+  aggregate.
+suggestion: >-
+  Use countDistinct() for exact counts or approx_count_distinct() for
+  faster approximate counts:
+
+    from pyspark.sql.functions import countDistinct, approx_count_distinct
+    df.select(countDistinct("user_id"))
+    df.select(approx_count_distinct("user_id", rsd=0.05))
