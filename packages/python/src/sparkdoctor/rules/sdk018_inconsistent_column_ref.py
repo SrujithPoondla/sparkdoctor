@@ -17,7 +17,9 @@ class InconsistentColumnRefRule(Rule):
 
     rule_id = "SDK018"
 
-    # DataFrame methods — used to identify DF variables and attribute access context.
+    # DataFrame methods that return DataFrames — used to identify DF variables
+    # and attribute access context. Any method here is also excluded from
+    # column-access detection via _NON_COLUMN_ATTRS.
     _DF_METHODS = {
         "select",
         "filter",
@@ -38,9 +40,26 @@ class InconsistentColumnRefRule(Rule):
         "withColumnRenamed",
         "alias",
         "toDF",
+        "unionByName",
+        "sortWithinPartitions",
+        "repartition",
+        "coalesce",
+        "sample",
+        "sampleBy",
+        "subtract",
+        "intersect",
+        "exceptAll",
+        "transform",
+        "checkpoint",
+        "localCheckpoint",
+        "mapInPandas",
+        "mapInArrow",
+        "randomSplit",
+        "withWatermark",
     }
 
     # Attributes that are NOT column access on a DataFrame.
+    # Methods already in _DF_METHODS are included via the union at the end.
     _NON_COLUMN_ATTRS = {
         "columns",
         "schema",
@@ -64,7 +83,6 @@ class InconsistentColumnRefRule(Rule):
         "first",
         "take",
         "toPandas",
-        "alias",
         "asc",
         "desc",
         "cast",
@@ -83,33 +101,16 @@ class InconsistentColumnRefRule(Rule):
         "createOrReplaceTempView",
         "createTempView",
         "isEmpty",
-        "unionByName",
-        "sortWithinPartitions",
-        "repartition",
-        "coalesce",
-        "sample",
-        "sampleBy",
-        "crossJoin",
-        "subtract",
-        "intersect",
-        "exceptAll",
-        "transform",
         "observe",
-        "checkpoint",
-        "localCheckpoint",
-        "mapInPandas",
-        "mapInArrow",
         "foreach",
         "foreachPartition",
         "toJSON",
         "toLocalIterator",
-        "randomSplit",
         "freqItems",
         "approxQuantile",
         "crosstab",
         "cov",
         "corr",
-        "withWatermark",
         "isStreaming",
         "isLocal",
     } | _DF_METHODS

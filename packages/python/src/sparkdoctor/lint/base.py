@@ -107,7 +107,7 @@ def _load_rules_spec() -> dict[str, dict]:
 
     _rules_spec = {}
     for yaml_file in sorted(rules_dir.glob("*.yaml")):
-        with open(yaml_file) as f:
+        with open(yaml_file, encoding="utf-8") as f:
             spec = _yaml.safe_load(f)
         if spec and "rule_id" in spec:
             _rules_spec[spec["rule_id"]] = spec

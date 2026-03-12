@@ -61,12 +61,14 @@ def parse_expectations(source_lines: list[str]) -> dict[int, set[str]]:
 
         # If the code portion of this line is just a closing paren/bracket,
         # apply the expectation to the preceding code line instead.
+        # Walk past nested closing delimiters to find the actual code line.
+        closing_only = {")", "]", "}", "):", "),", "],", "},"}
         code_part = line.split("#")[0].strip()
         target_line = i
-        if code_part in (")", "]", "}", "):", "],"):
+        if code_part in closing_only:
             for j in range(i - 1, 0, -1):
-                prev = source_lines[j - 1].strip()
-                if prev and not prev.startswith("#"):
+                prev_code = source_lines[j - 1].split("#")[0].strip()
+                if prev_code and not prev_code.startswith("#") and prev_code not in closing_only:
                     target_line = j
                     break
 

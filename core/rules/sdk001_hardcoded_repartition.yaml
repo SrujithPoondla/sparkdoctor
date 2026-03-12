@@ -6,6 +6,7 @@ languages: [python, scala, java]
 explanation: >-
   Partition counts hardcoded at development time become wrong as data grows. A job tuned for 50 GB creates undersized or oversized partitions when data changes. The count that was optimal last month may cause spill to disk or underutilization today.
 suggestion: >-
-  Remove the hardcoded count and let AQE manage partitioning automatically (requires spark.sql.adaptive.enabled=true, which is the default in Spark 3.2+). If you need explicit control, derive the count from data size:
-
-  num_partitions = max(df.rdd.getNumPartitions(), estimated_rows // 1_000_000)
+  Remove the hardcoded count and let AQE manage partitioning automatically
+  (requires spark.sql.adaptive.enabled=true, which is the default in Spark
+  3.2+). If you need explicit control, derive the count from data size at
+  runtime rather than baking in a literal.
