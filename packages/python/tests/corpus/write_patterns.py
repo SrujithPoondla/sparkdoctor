@@ -21,3 +21,7 @@ df.write.insertInto("table")  # expect: none
 
 # writeStream has different semantics — not flagged
 df.writeStream.format("kafka").start()  # expect: none
+
+# mode= keyword arg — OK
+df.write.parquet("output", mode="overwrite")  # expect: none
+df.write.csv("output", mode="append")  # expect: none

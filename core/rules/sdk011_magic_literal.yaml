@@ -1,6 +1,6 @@
 rule_id: SDK011
 title: "Magic literal in filter/when condition"
-severity: warning
+severity: info
 category: style
 languages: [python, scala, java]
 explanation: >-

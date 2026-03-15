@@ -178,3 +178,43 @@ df.write.parquet("path2")
     results = check(source)
     assert len(results) == 1
     assert results[0].line == 3
+
+
+def test_mode_kwarg_in_parquet():
+    """mode= keyword arg in write terminal method — OK."""
+    source = """\
+from pyspark.sql import SparkSession
+df.write.parquet("path", mode="overwrite")
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_mode_kwarg_in_csv():
+    """mode= keyword arg in csv() — OK."""
+    source = """\
+from pyspark.sql import SparkSession
+df.write.csv("path", mode="append")
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_mode_kwarg_in_save():
+    """mode= keyword arg in save() — OK."""
+    source = """\
+from pyspark.sql import SparkSession
+df.write.format("delta").save("path", mode="overwrite")
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_other_kwarg_without_mode():
+    """Other keyword args but no mode= — should still flag."""
+    source = """\
+from pyspark.sql import SparkSession
+df.write.parquet("path", compression="snappy")
+"""
+    results = check(source)
+    assert len(results) == 1

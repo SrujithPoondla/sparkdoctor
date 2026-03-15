@@ -72,3 +72,37 @@ def test_nested_chains_detected_independently():
     source = _PYSPARK + ("result = df.a().b().c().d().e().f(other.x().y().z().w().v().u())\n")
     results = check(source)
     assert len(results) == 2
+
+
+def test_struct_type_chain_not_flagged():
+    """StructType().add().add()... schema builders should not trigger."""
+    source = _PYSPARK + (
+        "schema = (\n"
+        "    StructType()\n"
+        "    .add('name', 'string')\n"
+        "    .add('age', 'int')\n"
+        "    .add('email', 'string')\n"
+        "    .add('city', 'string')\n"
+        "    .add('state', 'string')\n"
+        "    .add('zip', 'string')\n"
+        ")\n"
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_array_type_chain_not_flagged():
+    """ArrayType and other type builders should not trigger."""
+    source = _PYSPARK + (
+        "schema = (\n"
+        "    StructType()\n"
+        "    .add('a', ArrayType(StringType()).add('x'))\n"
+        "    .add('b', 'string')\n"
+        "    .add('c', 'string')\n"
+        "    .add('d', 'string')\n"
+        "    .add('e', 'string')\n"
+        "    .add('f', 'string')\n"
+        ")\n"
+    )
+    results = check(source)
+    assert results == []
