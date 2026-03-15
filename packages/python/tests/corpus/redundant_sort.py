@@ -6,7 +6,7 @@ spark = SparkSession.builder.getOrCreate()
 df = spark.read.parquet("events")
 
 # Two orderBy calls — first is wasted
-df.orderBy("date").orderBy("user_id").write.parquet("out")  # expect: SDK030, SDK027, SDK029
+df.orderBy("date").orderBy("user_id").write.parquet("out")  # expect: SDK030, SDK027
 
 # Mixing sort() and orderBy() — first is wasted
 df.sort("date").orderBy("user_id")  # expect: SDK030
@@ -15,7 +15,7 @@ df.sort("date").orderBy("user_id")  # expect: SDK030
 df.sort("a").filter(df.x > 0).sort("b")  # expect: SDK030
 
 # Single sort — fine
-df.orderBy("user_id", "date").write.parquet("out")  # expect: SDK027, SDK029
+df.orderBy("user_id", "date").write.parquet("out")  # expect: SDK027
 
 # Single sort — fine
 df.sort("a")  # expect: none

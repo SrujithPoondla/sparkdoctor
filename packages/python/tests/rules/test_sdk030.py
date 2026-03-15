@@ -51,8 +51,9 @@ def test_flags_first_sort_not_last():
     source = 'df.orderBy("date").orderBy("user_id").show()'
     results = check(source)
     assert len(results) == 1
-    # The flagged line should be the first orderBy
+    # The flagged line should be the first orderBy (line 2 after prepended import)
     assert results[0].rule_id == "SDK030"
+    assert results[0].line == 2
 
 
 def test_triple_sort():
