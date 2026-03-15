@@ -91,12 +91,29 @@ def test_struct_type_chain_not_flagged():
     assert results == []
 
 
+def test_module_qualified_struct_type_not_flagged():
+    """T.StructType().add().add()... with import alias should not trigger."""
+    source = _PYSPARK + (
+        "schema = (\n"
+        "    T.StructType()\n"
+        "    .add('name', 'string')\n"
+        "    .add('age', 'int')\n"
+        "    .add('email', 'string')\n"
+        "    .add('city', 'string')\n"
+        "    .add('state', 'string')\n"
+        "    .add('zip', 'string')\n"
+        ")\n"
+    )
+    results = check(source)
+    assert results == []
+
+
 def test_array_type_chain_not_flagged():
     """ArrayType and other type builders should not trigger."""
     source = _PYSPARK + (
         "schema = (\n"
         "    StructType()\n"
-        "    .add('a', ArrayType(StringType()).add('x'))\n"
+        "    .add('a', ArrayType(StringType()))\n"
         "    .add('b', 'string')\n"
         "    .add('c', 'string')\n"
         "    .add('d', 'string')\n"

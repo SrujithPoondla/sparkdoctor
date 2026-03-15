@@ -113,6 +113,7 @@ class CrossDataFrameColumnRefRule(Rule):
         "BinaryType",
         "ShortType",
         "ByteType",
+        "NullType",
         "broadcast",
     }
 

@@ -107,14 +107,21 @@ class ChainLengthRule(Rule):
             else:
                 return id(current)
 
-    @staticmethod
-    def _chain_root_name(node: ast.AST) -> str | None:
-        """Return the root Name.id of a method chain, or None."""
+    @classmethod
+    def _chain_root_name(cls, node: ast.AST) -> str | None:
+        """Return the root Name.id of a method chain, or None.
+
+        Also recognises module-qualified constructors like ``T.StructType()``
+        by returning ``"StructType"`` when the attribute matches a schema builder.
+        """
         current = node
         while True:
             if isinstance(current, ast.Call):
                 current = current.func
             elif isinstance(current, ast.Attribute):
+                # Handle module-qualified schema builders, e.g. T.StructType()
+                if current.attr in cls._SCHEMA_BUILDERS:
+                    return current.attr
                 current = current.value
             elif isinstance(current, ast.Name):
                 return current.id

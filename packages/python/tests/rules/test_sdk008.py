@@ -132,10 +132,16 @@ def test_column_cast_not_tracked_as_df():
 def test_broadcast_not_tracked_as_df():
     """Variables from broadcast() should not be treated as DataFrames."""
     source = _PYSPARK + (
-        "df = spark.read.parquet('data')\nbc_var = broadcast(lookup_table).value\n"
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "bc_var = broadcast(lookup_table).value\n"
+        "result = df2.select(df1.name)\n"
     )
     results = check(source)
-    assert results == []
+    # bc_var is not a DF; df1/df2 are — so SDK008 triggers for the cross-ref,
+    # but broadcast is not counted as a third DF variable.
+    assert len(results) == 1
+    assert "df1.name" in results[0].message
 
 
 def test_struct_type_not_tracked_as_df():
