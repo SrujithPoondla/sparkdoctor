@@ -32,12 +32,14 @@ class DistinctCountRule(Rule):
             # Check if the receiver is a distinct()/dropDuplicates() call
             receiver = node.func.value
             if isinstance(receiver, ast.Call) and self._is_dedup_call(receiver):
+                dedup_name = receiver.func.attr
                 diagnostics.append(
                     Diagnostic(
                         rule_id=self.rule_id,
                         severity=self.severity,
                         message=(
-                            "distinct().count() forces two passes — use countDistinct() instead"
+                            f"{dedup_name}().count() forces two passes"
+                            " — use countDistinct() instead"
                         ),
                         explanation=self._EXPLANATION,
                         suggestion=self._SUGGESTION,

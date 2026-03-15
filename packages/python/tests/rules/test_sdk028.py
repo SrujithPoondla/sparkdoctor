@@ -23,6 +23,7 @@ n = df.select("col").distinct().count()
     results = check(source)
     assert len(results) == 1
     assert results[0].rule_id == "SDK028"
+    assert "distinct().count()" in results[0].message
 
 
 def test_drop_duplicates_count():
@@ -33,6 +34,7 @@ n = df.dropDuplicates(["col"]).count()
     results = check(source)
     assert len(results) == 1
     assert results[0].rule_id == "SDK028"
+    assert "dropDuplicates().count()" in results[0].message
 
 
 def test_distinct_count_multiple_columns():

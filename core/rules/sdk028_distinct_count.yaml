@@ -16,3 +16,7 @@ suggestion: >-
     from pyspark.sql.functions import countDistinct, approx_count_distinct
     df.select(countDistinct("user_id"))
     df.select(approx_count_distinct("user_id", rsd=0.05))
+
+  Caveat: countDistinct() ignores NULLs while distinct().count() treats
+  NULL as a distinct value. Verify your query does not rely on counting
+  NULLs before switching.
