@@ -55,6 +55,31 @@ df.write.saveAsTable("my_table")
     assert results[0].rule_id == "SDK029"
 
 
+def test_writer_alias_without_mode():
+    """DataFrameWriter alias pattern — no .mode() anywhere."""
+    source = """\
+from pyspark.sql import SparkSession
+writer = df.write.option("mergeSchema", "true")
+writer.parquet("path")
+"""
+    results = check(source)
+    assert len(results) == 1
+    assert results[0].rule_id == "SDK029"
+    assert results[0].line == 3
+
+
+def test_writer_alias_with_options_without_mode():
+    """Alias with chained options but no .mode()."""
+    source = """\
+from pyspark.sql import SparkSession
+writer = df.write.format("delta").option("key", "val")
+writer.save("path")
+"""
+    results = check(source)
+    assert len(results) == 1
+    assert results[0].rule_id == "SDK029"
+
+
 # ── True negative ───────────────────────────────────────────────────────────
 
 
@@ -98,6 +123,28 @@ def test_insert_into_not_flagged():
     source = """\
 from pyspark.sql import SparkSession
 df.write.insertInto("table")
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_writer_alias_with_mode_in_assignment():
+    """mode() set during alias assignment — OK."""
+    source = """\
+from pyspark.sql import SparkSession
+writer = df.write.mode("overwrite").option("mergeSchema", "true")
+writer.parquet("path")
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_writer_alias_with_mode_in_call_chain():
+    """mode() set on the alias call chain — OK."""
+    source = """\
+from pyspark.sql import SparkSession
+writer = df.write.option("mergeSchema", "true")
+writer.mode("overwrite").parquet("path")
 """
     results = check(source)
     assert results == []
