@@ -1,0 +1,15 @@
+rule_id: SDK030
+title: "Multiple orderBy()/sort() — earlier sorts are wasted"
+severity: warning
+category: performance
+languages: [python, scala, java]
+explanation: >-
+  Chaining multiple orderBy() or sort() calls triggers a global shuffle
+  for each sort, but only the last one determines the final order. Earlier
+  sorts are fully discarded, wasting cluster resources on expensive
+  shuffles that produce no lasting effect.
+suggestion: >-
+  Combine all sort criteria into a single orderBy() or sort() call:
+
+    df.orderBy("user_id", "date")
+    df.sort(col("user_id"), col("date").desc())
