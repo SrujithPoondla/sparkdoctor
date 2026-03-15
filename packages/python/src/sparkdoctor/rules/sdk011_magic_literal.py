@@ -1,7 +1,7 @@
 """
 SDK011 — Magic literal in filter/when condition.
 
-Severity: WARNING
+Severity: INFO
 """
 
 from __future__ import annotations

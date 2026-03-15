@@ -102,3 +102,48 @@ def test_cross_df_in_other_methods(method, call):
     results = check(source)
     assert len(results) == 1
     assert results[0].rule_id == "SDK008"
+
+
+# ── False positive prevention ─────────────────────────────────────────────
+
+
+def test_column_getitem_not_tracked_as_df():
+    """Variables from Column.getItem() should not be treated as DataFrames."""
+    source = _PYSPARK + (
+        "df = spark.read.parquet('data')\n"
+        "split_col = df.name.getItem(0)\n"
+        "result = df.select(split_col.alias('first'))\n"
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_column_cast_not_tracked_as_df():
+    """Variables from Column.cast() should not be treated as DataFrames."""
+    source = _PYSPARK + (
+        "df = spark.read.parquet('data')\n"
+        "typed_col = df.age.cast('int')\n"
+        "result = df.select(typed_col.alias('age_int'))\n"
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_broadcast_not_tracked_as_df():
+    """Variables from broadcast() should not be treated as DataFrames."""
+    source = _PYSPARK + (
+        "df = spark.read.parquet('data')\nbc_var = broadcast(lookup_table).value\n"
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_struct_type_not_tracked_as_df():
+    """StructType schema builders should not be treated as DataFrames."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "schema = StructType().add('name', 'string')\n"
+        "result = df1.select(df1.name)\n"
+    )
+    results = check(source)
+    assert results == []
