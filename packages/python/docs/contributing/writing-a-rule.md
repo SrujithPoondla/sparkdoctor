@@ -215,10 +215,49 @@ and why the rule doesn't fire (or fires but can be suppressed).
 
 ---
 
-## Step 5: Verify the Full Test Suite Still Passes
+## Step 5: Add Corpus Annotations
+
+Add your rule to the corpus test files in `tests/corpus/`. Each rule needs:
+- At least one **positive** annotation: a line with `# expect: SDK0NN` where the rule should fire
+- At least one **negative** annotation: a line with `# expect: none` where it should not
+
+You can add annotations to existing corpus files or create a new one:
+
+```python
+# your_pattern.py — SDK0NN
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.getOrCreate()
+df = spark.read.parquet("events")
+
+# Bad pattern
+df.the_bad_call(200)  # expect: SDK0NN
+
+# Good pattern
+df.the_correct_call(variable)  # expect: none
+```
+
+---
+
+## Step 6: Verify Everything Passes
+
+Run the full CI pipeline locally before pushing:
 
 ```bash
-pytest tests/ -v
+make ci      # mirrors the GitHub Actions CI workflow exactly
+make build   # mirrors the PyPI publish workflow
+```
+
+This runs ruff check, ruff format, pytest, self-lint, and rule validation — the same
+steps that run in CI. If `make ci` passes locally, the GitHub workflow will pass too.
+
+You can also run individual steps:
+
+```bash
+make test          # pytest only
+make lint          # ruff check only
+make format-check  # ruff format check only
+make self-lint     # sparkdoctor lint on its own source
 ```
 
 All existing tests must still pass. Your new tests must pass.
@@ -226,14 +265,14 @@ No existing test should change behavior because of your rule.
 
 ---
 
-## Step 6: Open a Pull Request
+## Step 7: Open a Pull Request
 
 PR title format: `feat(rules): Add SDK0NN — Your Rule Title`
 
 PR description must include:
 - Link to the GitHub issue
 - One real-world example of this anti-pattern from open-source code (with link)
-- Confirmation that `pytest tests/ -v` passes
+- Confirmation that `make ci` passes locally
 - Confirmation that `sparkdoctor lint tests/fixtures/clean_job.py` produces zero findings
 
 ---
@@ -245,7 +284,9 @@ Before submitting, verify:
 - [ ] Rule ID is the next sequential number
 - [ ] Rule fires on `tests/fixtures/bad_job.py` (add the pattern to that file)
 - [ ] Rule does NOT fire on `tests/fixtures/clean_job.py`
-- [ ] `pytest tests/ -v` — all tests green
+- [ ] Corpus annotations added (positive + negative)
+- [ ] `make ci` passes — all tests, ruff, self-lint green
+- [ ] `make build` passes — wheel and sdist build successfully
 - [ ] `explanation` is 2-3 sentences, no jargon, explains the impact
 - [ ] `suggestion` includes a concrete code example
 - [ ] `severity` is justified in the PR description

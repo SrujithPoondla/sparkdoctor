@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sparkdoctor"
-version = "0.1.7"
+version = "0.1.8"
 description = "A Spark linter — catches performance, correctness, and style issues before they reach your cluster"
-readme = "../../README.md"
+readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 keywords = ["pyspark", "spark", "linter", "performance", "data-engineering"]
@@ -79,4 +79,7 @@ packages = ["src/sparkdoctor"]
 "../../core/rules" = "sparkdoctor/core/rules"
 
 [tool.hatch.build.targets.sdist]
-include = ["src/sparkdoctor", "../../core"]
+include = ["src/sparkdoctor", "README.md", "pyproject.toml"]
+
+[tool.hatch.build.targets.sdist.force-include]
+"../../core/rules" = "core/rules"

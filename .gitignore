@@ -31,3 +31,6 @@ htmlcov/
 
 # Distribution
 *.tar.gz
+
+# Build artifacts — README copied into package dir during publish
+packages/python/README.md

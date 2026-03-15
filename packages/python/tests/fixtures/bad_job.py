@@ -178,4 +178,59 @@ everything = events.select("*")
 result.orderBy("country").write.parquet("s3://output/sorted/")
 
 
+# ── SDK008: Cross-DataFrame column reference ─────────────────────────────
+# Using users.user_id inside events.select() — wrong DataFrame.
+cross_ref = events.select(users.user_id)
+
+
+# ── SDK009: Long transformation chain ────────────────────────────────────
+# 8+ chained transformations without intermediate assignment.
+output = (
+    events.filter(F.col("status") == "active")
+    .withColumn("ts", F.col("timestamp").cast("long"))
+    .withColumn("date_str", F.col("date").cast("string"))
+    .select("user_id", "event_type", "ts", "date_str", "country")
+    .filter(F.col("country").isNotNull())
+    .dropDuplicates(["user_id", "event_type"])
+    .orderBy("ts")
+    .limit(1000)
+)
+
+
+# ── SDK011: Magic literal in filter/when condition ───────────────────────
+# What does 86400 mean? Who knows.
+events.filter(F.col("duration") > 86400)
+
+
+# ── SDK018: Inconsistent column reference style ──────────────────────────
+# Mixing col("x") and "x" string-style references.
+events.select(F.col("user_id"), "event_type")
+
+
+# ── SDK020: DROP TABLE before overwrite ──────────────────────────────────
+# Unnecessary manual cleanup when mode("overwrite") exists.
+spark.sql("DROP TABLE IF EXISTS staging.events")
+events.write.mode("overwrite").saveAsTable("staging.events")
+
+
+# ── SDK024: Streaming read without explicit schema ───────────────────────
+# Streaming sources cannot infer schema — must be explicit.
+stream = spark.readStream.format("json").load("s3://data-lake/stream/")
+
+
+# ── SDK028: distinct().count() two-pass anti-pattern ─────────────────────
+# Shuffles for distinct, then scans again for count. Use countDistinct().
+num_unique = events.select("user_id").distinct().count()
+
+
+# ── SDK029: DataFrame write without explicit mode ────────────────────────
+# Default mode is "error" — job fails if path exists.
+events.write.parquet("s3://output/events_raw/")
+
+
+# ── SDK030: Redundant sorts in chain ─────────────────────────────────────
+# First sort is completely wasted — only the last sort matters.
+events.orderBy("timestamp").orderBy("user_id").show()
+
+
 spark.stop()

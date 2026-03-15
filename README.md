@@ -75,6 +75,25 @@ $ sparkdoctor lint jobs/pipeline.py
 | SDK027 | orderBy()/sort() before write is wasteful | performance | ⚠ warning |
 | SDK031 | collect() or toPandas() inside a loop | performance | ✖ error |
 
+### Code Quality (v0.1.7)
+
+| ID | Title | Category | Severity |
+|----|-------|----------|----------|
+| SDK008 | Cross-DataFrame column reference | correctness | ⚠ warning |
+| SDK009 | Long transformation chain without intermediate assignment | style | ℹ info |
+| SDK011 | Magic literal in filter/when condition | style | ⚠ warning |
+| SDK018 | Inconsistent column reference style | style | ℹ info |
+| SDK020 | DROP TABLE or fs.rm before overwrite write | correctness | ℹ info |
+| SDK024 | Streaming read without explicit schema | correctness | ℹ info |
+
+### Anti-Patterns (v0.1.8)
+
+| ID | Title | Category | Severity |
+|----|-------|----------|----------|
+| SDK028 | distinct().count() is a two-pass operation | performance | ⚠ warning |
+| SDK029 | DataFrame write without explicit mode | correctness | ⚠ warning |
+| SDK030 | Multiple orderBy()/sort() — earlier sorts are wasted | performance | ⚠ warning |
+
 Full rule documentation in [`docs/rules/`](docs/rules/).
 
 ---
@@ -106,7 +125,7 @@ Use `--exclude tests` and `--disable SDK023` to reduce noise on tutorial/test co
 
 ## Install
 
-Requires Python 3.9+. No Spark installation needed.
+Requires Python 3.10+. No Spark installation needed.
 
 ```bash
 pip install sparkdoctor
@@ -247,6 +266,33 @@ scala = "sparkdoctor_scala.parser:ScalaParser"
 
 ---
 
+## Development
+
+```bash
+# Set up
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e "packages/python[dev]"
+
+# Run the full CI pipeline locally (mirrors GitHub Actions exactly)
+make ci
+
+# Build wheel + sdist (mirrors the PyPI publish workflow)
+make build
+
+# Individual steps
+make test          # pytest
+make lint          # ruff check
+make format        # ruff format (auto-fix)
+make format-check  # ruff format (check only)
+make self-lint     # sparkdoctor lint on its own source
+make clean         # remove build artifacts
+```
+
+Always run `make ci` before pushing. If it passes locally, CI will pass on GitHub.
+
+---
+
 ## Contributing
 
 The best contribution is a new rule. If you have seen an anti-pattern burn your team,
@@ -285,6 +331,28 @@ DuckDB or Polars equivalents.
 ---
 
 ## Changelog
+
+### v0.1.8
+
+- **10 new rules:** SDK008 (cross-DataFrame column reference), SDK009 (long chain),
+  SDK011 (magic literal in filter/when), SDK018 (inconsistent column refs),
+  SDK020 (DROP TABLE before overwrite), SDK024 (streaming without schema),
+  SDK028 (distinct().count() two-pass anti-pattern),
+  SDK029 (write without explicit mode), SDK030 (redundant sorts in chain)
+- **Monorepo restructure:** `packages/python/` layout with per-rule YAML metadata in `core/rules/`
+- **Corpus testing:** inline `# expect: SDKXXX` annotations with coverage enforcement
+- **Concise output:** terminal output is concise by default, `--verbose` for details
+- **Ruff integration:** linter + formatter in CI
+- **SDK029:** DataFrameWriter alias tracking — detects `.mode()` omission
+  even when the writer is assigned to a variable
+- **SDK028:** Dynamic message for distinct() vs dropDuplicates() variants;
+  NULL semantics caveat in suggestion
+- 28 rules, 298 tests
+
+### v0.1.7
+
+- Updated project description, broadened to Spark
+- 19 rules, 207 tests
 
 ### v0.1.6
 

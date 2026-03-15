@@ -5,10 +5,10 @@ spark = SparkSession.builder.getOrCreate()
 df = spark.read.parquet("events")
 
 # orderBy/sort right before write — expensive full shuffle for nothing
-df.orderBy("timestamp").write.parquet("output")  # expect: SDK027
+df.orderBy("timestamp").write.parquet("output")  # expect: SDK027, SDK029
 
 # Correct: write without unnecessary ordering
-df.write.parquet("output")  # expect: none
+df.write.mode("append").parquet("output")  # expect: none
 
 # orderBy used for display or limit — fine
 df.orderBy("timestamp").show()  # expect: SDK023

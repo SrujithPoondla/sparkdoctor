@@ -33,7 +33,9 @@ daily_summary = (
     .agg(F.count("event_type").alias("event_count"))
 )
 # Write as a single file using maxRecordsPerFile, not by collapsing to 1 partition
-daily_summary.write.option("maxRecordsPerFile", 5_000_000).parquet("s3://output/daily/")
+daily_summary.write.mode("overwrite").option("maxRecordsPerFile", 5_000_000).parquet(
+    "s3://output/daily/"
+)
 
 
 # ── Correct: pandas_udf for vectorized execution ─────────────────────────────
@@ -171,7 +173,7 @@ subset = events.select("user_id", "event_type", "timestamp")
 
 
 # ── Correct: sortWithinPartitions instead of orderBy before write ────────────
-result.sortWithinPartitions("country").write.parquet("s3://output/sorted/")
+result.sortWithinPartitions("country").write.mode("append").parquet("s3://output/sorted/")
 
 
 spark.stop()

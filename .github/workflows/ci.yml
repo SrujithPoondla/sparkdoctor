@@ -25,6 +25,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Copy README for hatchling metadata
+        run: cp ../../README.md .
+
       - name: Install dependencies
         run: pip install -e ".[dev]"
 

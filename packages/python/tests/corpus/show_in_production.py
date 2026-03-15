@@ -9,4 +9,4 @@ df.show()  # expect: SDK023
 df.show(20, False)  # expect: SDK023
 
 # Correct: use logging or write to output
-df.write.parquet("output")  # expect: none
+df.write.mode("overwrite").parquet("output")  # expect: none

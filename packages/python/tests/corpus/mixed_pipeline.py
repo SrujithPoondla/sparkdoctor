@@ -23,7 +23,7 @@ for t in transforms:  # expect: SDK004
 all_rows = raw.collect()  # expect: SDK002
 
 # Hardcoded repartition before write
-raw.repartition(200).write.parquet("output/")  # expect: SDK001
+raw.repartition(200).write.parquet("output/")  # expect: SDK001, SDK029
 
 # Count for emptiness check
 if raw.count() == 0:  # expect: SDK003

@@ -26,8 +26,13 @@ jobs:
       - name: Install build tools
         run: pip install build
 
-      - name: Build package
-        run: python -m build
+      - name: Copy README for package build
+        run: cp ../../README.md .
+
+      - name: Build wheel and sdist
+        run: |
+          python -m build --wheel
+          python -m build --sdist
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
