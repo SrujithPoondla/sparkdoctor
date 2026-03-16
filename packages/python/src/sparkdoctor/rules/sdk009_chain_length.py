@@ -19,6 +19,26 @@ class ChainLengthRule(Rule):
 
     _THRESHOLD = 5
 
+    # Root names that are schema/type builders, not DataFrame chains.
+    _SCHEMA_BUILDERS = {
+        "StructType",
+        "StructField",
+        "ArrayType",
+        "MapType",
+        "StringType",
+        "IntegerType",
+        "LongType",
+        "DoubleType",
+        "FloatType",
+        "BooleanType",
+        "DateType",
+        "TimestampType",
+        "DecimalType",
+        "BinaryType",
+        "ShortType",
+        "ByteType",
+    }
+
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         if not _has_pyspark_import(tree):
             return []
@@ -31,6 +51,11 @@ class ChainLengthRule(Rule):
             if not isinstance(node, ast.Call):
                 continue
             if not isinstance(node.func, ast.Attribute):
+                continue
+
+            # Skip schema builder chains (StructType().add().add()...)
+            root = self._chain_root_name(node)
+            if root in self._SCHEMA_BUILDERS:
                 continue
 
             depth = self._chain_depth(node)
@@ -81,3 +106,24 @@ class ChainLengthRule(Rule):
                 current = current.value
             else:
                 return id(current)
+
+    @classmethod
+    def _chain_root_name(cls, node: ast.AST) -> str | None:
+        """Return the root Name.id of a method chain, or None.
+
+        Also recognises module-qualified constructors like ``T.StructType()``
+        by returning ``"StructType"`` when the attribute matches a schema builder.
+        """
+        current = node
+        while True:
+            if isinstance(current, ast.Call):
+                current = current.func
+            elif isinstance(current, ast.Attribute):
+                # Handle module-qualified schema builders, e.g. T.StructType()
+                if current.attr in cls._SCHEMA_BUILDERS:
+                    return current.attr
+                current = current.value
+            elif isinstance(current, ast.Name):
+                return current.id
+            else:
+                return None

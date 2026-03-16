@@ -13,3 +13,7 @@ result = df2.select(df2.user_id, df2.name)  # expect: none
 
 # String column refs — fine
 result = df2.select("user_id", "name")  # expect: none
+
+# Column operations — not DataFrames
+split_col = df1.user_id.getItem(0)  # expect: none
+typed_col = df1.name.cast("string")  # expect: none

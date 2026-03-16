@@ -37,6 +37,10 @@ class WriteWithoutModeRule(Rule):
             if node.func.attr not in self._WRITE_TERMINALS:
                 continue
 
+            # Check for mode= keyword arg in the terminal write call
+            if self._has_mode_kwarg(node):
+                continue
+
             # Check inline chains (e.g. df.write.parquet(...))
             if self._chain_has_write(node):
                 if chain_contains_method(node, {"mode"}):
@@ -100,6 +104,11 @@ class WriteWithoutModeRule(Rule):
                 return current.id
             else:
                 return None
+
+    @staticmethod
+    def _has_mode_kwarg(node: ast.Call) -> bool:
+        """Return True if the call has a ``mode=`` keyword argument."""
+        return any(kw.arg == "mode" for kw in node.keywords)
 
     @staticmethod
     def _chain_has_write(node: ast.AST) -> bool:
