@@ -94,16 +94,20 @@ def test_struct_type_chain_not_flagged():
 
 def test_module_qualified_struct_type_not_flagged():
     """T.StructType().add().add()... with import alias should not trigger."""
-    source = _PYSPARK_TYPES + (
-        "schema = (\n"
-        "    T.StructType()\n"
-        "    .add('name', 'string')\n"
-        "    .add('age', 'int')\n"
-        "    .add('email', 'string')\n"
-        "    .add('city', 'string')\n"
-        "    .add('state', 'string')\n"
-        "    .add('zip', 'string')\n"
-        ")\n"
+    source = (
+        _PYSPARK
+        + "import pyspark.sql.types as T\n"
+        + (
+            "schema = (\n"
+            "    T.StructType()\n"
+            "    .add('name', 'string')\n"
+            "    .add('age', 'int')\n"
+            "    .add('email', 'string')\n"
+            "    .add('city', 'string')\n"
+            "    .add('state', 'string')\n"
+            "    .add('zip', 'string')\n"
+            ")\n"
+        )
     )
     results = check(source)
     assert results == []

@@ -95,9 +95,9 @@ class ChainLengthRule(Rule):
     def _collect_type_imports(tree: ast.AST) -> set[str]:
         """Collect names imported from pyspark.sql.types.
 
-        These are schema/type builders (StructType, ArrayType, etc.) whose
-        chained calls (e.g. StructType().add().add()...) should not be
-        flagged as long transformation chains.
+        Handles both ``from pyspark.sql.types import X`` (ImportFrom) and
+        ``import pyspark.sql.types as T`` (Import).  These are schema/type
+        builders whose chained calls should not be flagged.
         """
         type_names: set[str] = set()
         for node in ast.walk(tree):
@@ -109,6 +109,11 @@ class ChainLengthRule(Rule):
                 for alias in node.names:
                     name = alias.asname if alias.asname else alias.name
                     type_names.add(name)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name and alias.name.startswith("pyspark.sql.types"):
+                        name = alias.asname if alias.asname else alias.name
+                        type_names.add(name)
         return type_names
 
     @staticmethod

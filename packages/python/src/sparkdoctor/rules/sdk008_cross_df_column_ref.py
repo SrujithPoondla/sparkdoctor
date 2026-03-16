@@ -125,10 +125,10 @@ class CrossDataFrameColumnRefRule(Rule):
     def _collect_non_df_imports(tree: ast.AST) -> set[str]:
         """Collect imported names that are not DataFrames.
 
-        Includes names from ``pyspark.sql`` (SparkSession, etc.),
-        ``pyspark.sql.types``, and ``pyspark.sql.functions``.
-        These produce sessions, type objects, and Column objects — not
-        DataFrames.
+        Handles both ``from pyspark.sql import X`` (ImportFrom) and
+        ``import pyspark.sql.types as T`` (Import).  Includes names from
+        ``pyspark.sql`` (SparkSession, etc.), ``pyspark.sql.types``, and
+        ``pyspark.sql.functions``.
         """
         non_df: set[str] = set()
         for node in ast.walk(tree):
@@ -140,6 +140,15 @@ class CrossDataFrameColumnRefRule(Rule):
                     or mod.startswith("pyspark.sql.functions")
                 ):
                     for alias in node.names:
+                        name = alias.asname if alias.asname else alias.name
+                        non_df.add(name)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name and (
+                        alias.name == "pyspark.sql"
+                        or alias.name.startswith("pyspark.sql.types")
+                        or alias.name.startswith("pyspark.sql.functions")
+                    ):
                         name = alias.asname if alias.asname else alias.name
                         non_df.add(name)
         return non_df
