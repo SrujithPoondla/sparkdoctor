@@ -114,6 +114,11 @@ class ChainLengthRule(Rule):
                     if alias.name and alias.name.startswith("pyspark.sql.types"):
                         name = alias.asname if alias.asname else alias.name
                         type_names.add(name)
+                        # For unaliased `import pyspark.sql.types`,
+                        # _chain_root_name() returns the root Name ("pyspark"),
+                        # so also store that for matching.
+                        if not alias.asname and "." in alias.name:
+                            type_names.add(alias.name.split(".")[0])
         return type_names
 
     @staticmethod

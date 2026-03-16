@@ -153,3 +153,28 @@ def test_struct_type_not_tracked_as_df():
     )
     results = check(source)
     assert results == []
+
+
+def test_chained_column_ops_not_tracked_as_df():
+    """df.age.cast('int').alias('age') should not be tracked as a DataFrame."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "expr = df1.age.cast('int').alias('age')\n"
+        "result = df2.select(df2.name)\n"
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_re_aliased_column_not_tracked_as_df():
+    """A variable derived from another Column variable should not be a DF."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "col_var = df1.age.cast('int')\n"
+        "expr = col_var.desc()\n"
+        "result = df2.select(df2.name)\n"
+    )
+    results = check(source)
+    assert results == []

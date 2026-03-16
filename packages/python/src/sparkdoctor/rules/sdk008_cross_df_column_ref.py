@@ -105,21 +105,31 @@ class CrossDataFrameColumnRefRule(Rule):
                     candidates[target.id] = value
 
         # Pass 2 — remove Column-pattern assignments
-        # Pattern: Call(Attr(Attr(Name(df_var), col_name), method))
-        # i.e. the method's receiver is `df_var.col_name` where df_var is
-        # already a DF candidate. This means the result is a Column, not a DF.
+        # Walk through chained Call layers to find the ultimate receiver.
+        # e.g. df.age.cast("int").alias("age") → peel off alias() and cast()
+        # to reach df.age — an Attribute on a DF variable → Column, not DF.
+        # Also handles re-aliased Column variables (expr = col_var.desc()).
         df_vars = set(candidates.keys())
-        to_remove: set[str] = set()
-        for var_name, call_node in candidates.items():
-            receiver = call_node.func.value  # already known to be ast.Attribute
-            if (
-                isinstance(receiver, ast.Attribute)
-                and isinstance(receiver.value, ast.Name)
-                and receiver.value.id in df_vars
-            ):
-                to_remove.add(var_name)
+        non_df_vars: set[str] = set()
+        changed = True
+        while changed:
+            changed = False
+            for var_name, call_node in candidates.items():
+                if var_name in non_df_vars:
+                    continue
+                # Walk through chained calls to find the base receiver
+                current: ast.AST = call_node.func.value
+                while isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute):
+                    current = current.func.value
+                if (
+                    isinstance(current, ast.Attribute)
+                    and isinstance(current.value, ast.Name)
+                    and current.value.id in df_vars
+                ) or (isinstance(current, ast.Name) and current.id in non_df_vars):
+                    non_df_vars.add(var_name)
+                    changed = True
 
-        return df_vars - to_remove
+        return df_vars - non_df_vars
 
     @staticmethod
     def _collect_non_df_imports(tree: ast.AST) -> set[str]:
@@ -151,6 +161,11 @@ class CrossDataFrameColumnRefRule(Rule):
                     ):
                         name = alias.asname if alias.asname else alias.name
                         non_df.add(name)
+                        # For unaliased imports like `import pyspark.sql.types`,
+                        # _chain_root() returns the root Name ("pyspark"), so
+                        # also store that for matching.
+                        if not alias.asname and "." in alias.name:
+                            non_df.add(alias.name.split(".")[0])
         return non_df
 
     @staticmethod

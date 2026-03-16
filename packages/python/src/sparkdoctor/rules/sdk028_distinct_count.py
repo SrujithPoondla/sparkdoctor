@@ -89,11 +89,12 @@ class DistinctCountRule(Rule):
         # Walk down the chain looking for .select() or [[ ]] subscript
         current = dedup_call.func.value if isinstance(dedup_call.func, ast.Attribute) else None
         while current is not None:
-            # .select(...) call
+            # .select(...) call — but not select("*") which is whole-row
             if (
                 isinstance(current, ast.Call)
                 and isinstance(current.func, ast.Attribute)
                 and current.func.attr == "select"
+                and not DistinctCountRule._is_select_star(current)
             ):
                 return True
             # df[["col1", "col2"]] subscript with a list
@@ -107,3 +108,13 @@ class DistinctCountRule(Rule):
             else:
                 break
         return False
+
+    @staticmethod
+    def _is_select_star(call: ast.Call) -> bool:
+        """Check if a .select() call is select('*') — i.e. whole-row."""
+        return (
+            len(call.args) == 1
+            and not call.keywords
+            and isinstance(call.args[0], ast.Constant)
+            and call.args[0].value == "*"
+        )

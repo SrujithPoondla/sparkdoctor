@@ -115,6 +115,18 @@ n = df[["user_id"]].distinct().count()
 """
     results = check(source)
     assert len(results) == 1
+    assert results[0].rule_id == "SDK028"
+    assert "distinct().count()" in results[0].message
+
+
+def test_select_star_distinct_count_not_flagged():
+    """select('*').distinct().count() is whole-row — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df.select("*").distinct().count()
+"""
+    results = check(source)
+    assert results == []
 
 
 def test_bare_drop_duplicates_without_args_not_flagged():
