@@ -95,3 +95,33 @@ n = df.filter(df.active).select("user_id").distinct().count()
 """
     results = check(source)
     assert len(results) == 1
+
+
+def test_bare_distinct_count_not_flagged():
+    """Whole-row distinct().count() has no better alternative — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df.distinct().count()
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_subscript_distinct_count():
+    """df[["col"]].distinct().count() should be flagged."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df[["user_id"]].distinct().count()
+"""
+    results = check(source)
+    assert len(results) == 1
+
+
+def test_bare_drop_duplicates_without_args_not_flagged():
+    """dropDuplicates() without column args is whole-row — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df.dropDuplicates().count()
+"""
+    results = check(source)
+    assert results == []

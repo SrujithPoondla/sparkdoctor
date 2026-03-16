@@ -70,79 +70,79 @@ class CrossDataFrameColumnRefRule(Rule):
                         )
         return diagnostics
 
-    # Methods that produce Column objects, not DataFrames.
-    _COLUMN_METHODS = {
-        "getItem",
-        "getField",
-        "cast",
-        "astype",
-        "alias",
-        "name",
-        "substr",
-        "startswith",
-        "endswith",
-        "contains",
-        "like",
-        "rlike",
-        "isin",
-        "between",
-        "isNull",
-        "isNotNull",
-        "asc",
-        "desc",
-        "over",
-        "otherwise",
-        "when",
-    }
-
-    # Root names that are type constructors, not DataFrame sources.
-    _NON_DF_ROOTS = {
-        "StructType",
-        "StructField",
-        "ArrayType",
-        "MapType",
-        "StringType",
-        "IntegerType",
-        "LongType",
-        "DoubleType",
-        "FloatType",
-        "BooleanType",
-        "DateType",
-        "TimestampType",
-        "DecimalType",
-        "BinaryType",
-        "ShortType",
-        "ByteType",
-        "NullType",
-        "broadcast",
-    }
-
     def _find_df_variables(self, tree: ast.AST) -> set[str]:
         """Find variable names likely holding DataFrames.
 
-        Detects assignments of the form ``var = obj.method(...)``, which covers
-        patterns like ``spark.read.parquet()`` and ``df.filter()``.  Excludes
-        assignments from Column operations (getItem, cast, alias, etc.),
-        broadcast variables, and type constructors to reduce false positives.
+        Uses purely structural AST analysis — no hardcoded method whitelists.
+
+        Pass 1: Collect all variables assigned from method-call chains,
+        excluding non-DF imports (pyspark.sql, pyspark.sql.types,
+        pyspark.sql.functions).
+
+        Pass 2: Remove variables whose assignment has the "column access"
+        pattern — where the method's receiver is ``df.col_name`` (an
+        ``ast.Attribute`` whose ``.value`` is an ``ast.Name`` already tracked
+        as a DF variable). This catches ``df.name.getItem(0)``,
+        ``df.age.cast('int')``, etc.
         """
-        df_vars: set[str] = set()
+        non_df_names = self._collect_non_df_imports(tree)
+
+        # Pass 1 — gather all method-chain assignment candidates
+        # Maps variable name → the ast.Call value node for later inspection
+        candidates: dict[str, ast.Call] = {}
         for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                value = node.value
-                # df = spark.read... / df = other_df.filter(...)
-                if isinstance(value, ast.Call) and isinstance(value.func, ast.Attribute):
-                    method_name = value.func.attr
-                    # Skip Column operations — these produce Column, not DataFrame
-                    if method_name in self._COLUMN_METHODS:
-                        continue
-                    # Skip type constructors and broadcast
-                    root = self._chain_root(value)
-                    if root in self._NON_DF_ROOTS:
-                        continue
-                    for target in node.targets:
-                        if isinstance(target, ast.Name):
-                            df_vars.add(target.id)
-        return df_vars
+            if not isinstance(node, ast.Assign):
+                continue
+            value = node.value
+            if not isinstance(value, ast.Call) or not isinstance(value.func, ast.Attribute):
+                continue
+            # Exclude if root is a non-DF import (types, functions)
+            root = self._chain_root(value)
+            if root in non_df_names:
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    candidates[target.id] = value
+
+        # Pass 2 — remove Column-pattern assignments
+        # Pattern: Call(Attr(Attr(Name(df_var), col_name), method))
+        # i.e. the method's receiver is `df_var.col_name` where df_var is
+        # already a DF candidate. This means the result is a Column, not a DF.
+        df_vars = set(candidates.keys())
+        to_remove: set[str] = set()
+        for var_name, call_node in candidates.items():
+            receiver = call_node.func.value  # already known to be ast.Attribute
+            if (
+                isinstance(receiver, ast.Attribute)
+                and isinstance(receiver.value, ast.Name)
+                and receiver.value.id in df_vars
+            ):
+                to_remove.add(var_name)
+
+        return df_vars - to_remove
+
+    @staticmethod
+    def _collect_non_df_imports(tree: ast.AST) -> set[str]:
+        """Collect imported names that are not DataFrames.
+
+        Includes names from ``pyspark.sql`` (SparkSession, etc.),
+        ``pyspark.sql.types``, and ``pyspark.sql.functions``.
+        These produce sessions, type objects, and Column objects — not
+        DataFrames.
+        """
+        non_df: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                mod = node.module
+                if (
+                    mod == "pyspark.sql"
+                    or mod.startswith("pyspark.sql.types")
+                    or mod.startswith("pyspark.sql.functions")
+                ):
+                    for alias in node.names:
+                        name = alias.asname if alias.asname else alias.name
+                        non_df.add(name)
+        return non_df
 
     @staticmethod
     def _chain_root(node: ast.AST) -> str | None:

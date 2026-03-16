@@ -19,29 +19,13 @@ class ChainLengthRule(Rule):
 
     _THRESHOLD = 5
 
-    # Root names that are schema/type builders, not DataFrame chains.
-    _SCHEMA_BUILDERS = {
-        "StructType",
-        "StructField",
-        "ArrayType",
-        "MapType",
-        "StringType",
-        "IntegerType",
-        "LongType",
-        "DoubleType",
-        "FloatType",
-        "BooleanType",
-        "DateType",
-        "TimestampType",
-        "DecimalType",
-        "BinaryType",
-        "ShortType",
-        "ByteType",
-    }
-
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         if not _has_pyspark_import(tree):
             return []
+
+        # Collect names imported from pyspark.sql.types — these are schema/type
+        # builders, not DataFrame chains. Derived from imports, not hardcoded.
+        type_names = self._collect_type_imports(tree)
 
         # Collect all candidates, then keep max depth per root to handle
         # ast.walk's unspecified traversal order.
@@ -54,8 +38,8 @@ class ChainLengthRule(Rule):
                 continue
 
             # Skip schema builder chains (StructType().add().add()...)
-            root = self._chain_root_name(node)
-            if root in self._SCHEMA_BUILDERS:
+            root = self._chain_root_name(node, type_names)
+            if root is not None and root in type_names:
                 continue
 
             depth = self._chain_depth(node)
@@ -107,20 +91,40 @@ class ChainLengthRule(Rule):
             else:
                 return id(current)
 
-    @classmethod
-    def _chain_root_name(cls, node: ast.AST) -> str | None:
+    @staticmethod
+    def _collect_type_imports(tree: ast.AST) -> set[str]:
+        """Collect names imported from pyspark.sql.types.
+
+        These are schema/type builders (StructType, ArrayType, etc.) whose
+        chained calls (e.g. StructType().add().add()...) should not be
+        flagged as long transformation chains.
+        """
+        type_names: set[str] = set()
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.ImportFrom)
+                and node.module
+                and node.module.startswith("pyspark.sql.types")
+            ):
+                for alias in node.names:
+                    name = alias.asname if alias.asname else alias.name
+                    type_names.add(name)
+        return type_names
+
+    @staticmethod
+    def _chain_root_name(node: ast.AST, type_names: set[str]) -> str | None:
         """Return the root Name.id of a method chain, or None.
 
         Also recognises module-qualified constructors like ``T.StructType()``
-        by returning ``"StructType"`` when the attribute matches a schema builder.
+        by returning the attribute name when it matches a known type import.
         """
         current = node
         while True:
             if isinstance(current, ast.Call):
                 current = current.func
             elif isinstance(current, ast.Attribute):
-                # Handle module-qualified schema builders, e.g. T.StructType()
-                if current.attr in cls._SCHEMA_BUILDERS:
+                # Handle module-qualified type builders, e.g. T.StructType()
+                if current.attr in type_names:
                     return current.attr
                 current = current.value
             elif isinstance(current, ast.Name):

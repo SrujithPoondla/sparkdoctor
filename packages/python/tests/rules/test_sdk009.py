@@ -7,6 +7,7 @@ from sparkdoctor.rules.sdk009_chain_length import ChainLengthRule
 RULE = ChainLengthRule()
 
 _PYSPARK = "from pyspark.sql import SparkSession\n"
+_PYSPARK_TYPES = _PYSPARK + "from pyspark.sql.types import StructType, ArrayType, StringType\n"
 
 
 def check(source: str):
@@ -76,7 +77,7 @@ def test_nested_chains_detected_independently():
 
 def test_struct_type_chain_not_flagged():
     """StructType().add().add()... schema builders should not trigger."""
-    source = _PYSPARK + (
+    source = _PYSPARK_TYPES + (
         "schema = (\n"
         "    StructType()\n"
         "    .add('name', 'string')\n"
@@ -93,7 +94,7 @@ def test_struct_type_chain_not_flagged():
 
 def test_module_qualified_struct_type_not_flagged():
     """T.StructType().add().add()... with import alias should not trigger."""
-    source = _PYSPARK + (
+    source = _PYSPARK_TYPES + (
         "schema = (\n"
         "    T.StructType()\n"
         "    .add('name', 'string')\n"
@@ -110,7 +111,7 @@ def test_module_qualified_struct_type_not_flagged():
 
 def test_array_type_chain_not_flagged():
     """ArrayType and other type builders should not trigger."""
-    source = _PYSPARK + (
+    source = _PYSPARK_TYPES + (
         "schema = (\n"
         "    StructType()\n"
         "    .add('a', ArrayType(StringType()))\n"

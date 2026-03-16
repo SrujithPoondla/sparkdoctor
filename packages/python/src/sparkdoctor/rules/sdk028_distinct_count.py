@@ -30,23 +30,28 @@ class DistinctCountRule(Rule):
             if not self._is_count_call(node):
                 continue
             # Check if the receiver is a distinct()/dropDuplicates() call
-            receiver = node.func.value
-            if isinstance(receiver, ast.Call) and self._is_dedup_call(receiver):
-                dedup_name = receiver.func.attr
-                diagnostics.append(
-                    Diagnostic(
-                        rule_id=self.rule_id,
-                        severity=self.severity,
-                        message=(
-                            f"{dedup_name}().count() forces two passes"
-                            " — use countDistinct() instead"
-                        ),
-                        explanation=self._EXPLANATION,
-                        suggestion=self._SUGGESTION,
-                        line=receiver.lineno,
-                        col=receiver.col_offset,
-                    )
+            dedup_call = node.func.value
+            if not isinstance(dedup_call, ast.Call) or not self._is_dedup_call(dedup_call):
+                continue
+            # Only flag when preceded by column selection (.select() or [[]])
+            # so countDistinct() is a valid replacement.
+            # Bare df.distinct().count() (whole-row) has no better alternative.
+            if not self._has_column_selection(dedup_call):
+                continue
+            dedup_name = dedup_call.func.attr
+            diagnostics.append(
+                Diagnostic(
+                    rule_id=self.rule_id,
+                    severity=self.severity,
+                    message=(
+                        f"{dedup_name}().count() forces two passes — use countDistinct() instead"
+                    ),
+                    explanation=self._EXPLANATION,
+                    suggestion=self._SUGGESTION,
+                    line=dedup_call.lineno,
+                    col=dedup_call.col_offset,
                 )
+            )
         return diagnostics
 
     def _is_count_call(self, node: ast.Call) -> bool:
@@ -61,3 +66,44 @@ class DistinctCountRule(Rule):
     def _is_dedup_call(self, node: ast.Call) -> bool:
         """Check if this is a .distinct() or .dropDuplicates() call."""
         return isinstance(node.func, ast.Attribute) and node.func.attr in self._DEDUP_METHODS
+
+    @staticmethod
+    def _has_column_selection(dedup_call: ast.Call) -> bool:
+        """Check if the dedup call's receiver is a column selection.
+
+        Returns True when the chain includes ``.select(...)`` or ``[[...]]``
+        before ``.distinct()``/``.dropDuplicates()``, meaning
+        ``countDistinct()`` is a valid single-pass replacement.
+
+        For ``dropDuplicates(["col"])``, the column selection is implicit
+        in the method arguments, so it always qualifies.
+        """
+        # dropDuplicates(["col"]) has implicit column selection
+        if (
+            isinstance(dedup_call.func, ast.Attribute)
+            and dedup_call.func.attr == "dropDuplicates"
+            and dedup_call.args
+        ):
+            return True
+
+        # Walk down the chain looking for .select() or [[ ]] subscript
+        current = dedup_call.func.value if isinstance(dedup_call.func, ast.Attribute) else None
+        while current is not None:
+            # .select(...) call
+            if (
+                isinstance(current, ast.Call)
+                and isinstance(current.func, ast.Attribute)
+                and current.func.attr == "select"
+            ):
+                return True
+            # df[["col1", "col2"]] subscript with a list
+            if isinstance(current, ast.Subscript) and isinstance(current.slice, ast.List):
+                return True
+            # Continue walking down the chain
+            if isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute):
+                current = current.func.value
+            elif isinstance(current, ast.Attribute):
+                current = current.value
+            else:
+                break
+        return False

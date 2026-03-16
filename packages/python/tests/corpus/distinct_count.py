@@ -17,6 +17,9 @@ n = df.select(F.countDistinct("user_id")).limit(1).collect()[0][0]  # expect: no
 # Correct: approx_count_distinct for large data
 n = df.select(F.approx_count_distinct("user_id")).limit(1).collect()[0][0]  # expect: none
 
+# Whole-row distinct().count() — no better alternative, skip
+n = df.distinct().count()  # expect: none
+
 # distinct() without count — fine
 deduped = df.select("user_id").distinct()  # expect: none
 
