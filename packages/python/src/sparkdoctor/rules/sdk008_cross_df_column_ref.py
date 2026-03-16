@@ -121,11 +121,23 @@ class CrossDataFrameColumnRefRule(Rule):
                 current: ast.AST = call_node.func.value
                 while isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute):
                     current = current.func.value
-                if (
+                # df.col_name.method() — Attribute on a DF variable → Column
+                is_column = (
                     isinstance(current, ast.Attribute)
                     and isinstance(current.value, ast.Name)
                     and current.value.id in df_vars
-                ) or (isinstance(current, ast.Name) and current.id in non_df_vars):
+                )
+                # df["col"].method() — Subscript on a DF variable → Column
+                is_column = is_column or (
+                    isinstance(current, ast.Subscript)
+                    and isinstance(current.value, ast.Name)
+                    and current.value.id in df_vars
+                )
+                # Re-aliased column variable (expr = col_var.desc())
+                is_column = is_column or (
+                    isinstance(current, ast.Name) and current.id in non_df_vars
+                )
+                if is_column:
                     non_df_vars.add(var_name)
                     changed = True
 

@@ -137,3 +137,36 @@ n = df.dropDuplicates().count()
 """
     results = check(source)
     assert results == []
+
+
+def test_drop_duplicates_keyword_subset():
+    """dropDuplicates(subset=["col"]) keyword form should be flagged."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df.dropDuplicates(subset=["col"]).count()
+"""
+    results = check(source)
+    assert len(results) == 1
+    assert results[0].rule_id == "SDK028"
+
+
+def test_select_col_star_not_flagged():
+    """select(col('*')).distinct().count() is whole-row — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
+n = df.select(col("*")).distinct().count()
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_select_f_col_star_not_flagged():
+    """select(F.col('*')).distinct().count() is whole-row — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+import pyspark.sql.functions as F
+n = df.select(F.col("*")).distinct().count()
+"""
+    results = check(source)
+    assert results == []

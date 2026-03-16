@@ -78,13 +78,13 @@ class DistinctCountRule(Rule):
         For ``dropDuplicates(["col"])``, the column selection is implicit
         in the method arguments, so it always qualifies.
         """
-        # dropDuplicates(["col"]) has implicit column selection
-        if (
-            isinstance(dedup_call.func, ast.Attribute)
-            and dedup_call.func.attr == "dropDuplicates"
-            and dedup_call.args
-        ):
-            return True
+        # dropDuplicates(["col"]) or dropDuplicates(subset=["col"])
+        # has implicit column selection
+        if isinstance(dedup_call.func, ast.Attribute) and dedup_call.func.attr == "dropDuplicates":
+            if dedup_call.args:
+                return True
+            if any(kw.arg == "subset" for kw in dedup_call.keywords):
+                return True
 
         # Walk down the chain looking for .select() or [[ ]] subscript
         current = dedup_call.func.value if isinstance(dedup_call.func, ast.Attribute) else None
@@ -111,10 +111,32 @@ class DistinctCountRule(Rule):
 
     @staticmethod
     def _is_select_star(call: ast.Call) -> bool:
-        """Check if a .select() call is select('*') — i.e. whole-row."""
+        """Check if a .select() call is select('*') — i.e. whole-row.
+
+        Also recognises ``select(col("*"))`` and ``select(F.col("*"))``
+        as whole-row equivalents.
+        """
+        if len(call.args) != 1 or call.keywords:
+            return False
+        arg = call.args[0]
+        # select("*")
+        if isinstance(arg, ast.Constant) and arg.value == "*":
+            return True
+        # select(col("*")) or select(F.col("*"))
+        return isinstance(arg, ast.Call) and DistinctCountRule._is_col_star(arg)
+
+    @staticmethod
+    def _is_col_star(node: ast.Call) -> bool:
+        """Check if a call is col('*') or <module>.col('*')."""
+        func = node.func
+        # col("*") — bare function call
+        is_col = isinstance(func, ast.Name) and func.id == "col"
+        # F.col("*") — module-qualified call
+        is_col = is_col or (isinstance(func, ast.Attribute) and func.attr == "col")
         return (
-            len(call.args) == 1
-            and not call.keywords
-            and isinstance(call.args[0], ast.Constant)
-            and call.args[0].value == "*"
+            is_col
+            and len(node.args) == 1
+            and not node.keywords
+            and isinstance(node.args[0], ast.Constant)
+            and node.args[0].value == "*"
         )

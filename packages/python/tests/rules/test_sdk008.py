@@ -178,3 +178,15 @@ def test_re_aliased_column_not_tracked_as_df():
     )
     results = check(source)
     assert results == []
+
+
+def test_subscript_column_not_tracked_as_df():
+    """df['col'].cast('int') via subscript should not be treated as a DataFrame."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "typed_col = df1['age'].cast('int')\n"
+        "result = df2.select(df2.name)\n"
+    )
+    results = check(source)
+    assert results == []

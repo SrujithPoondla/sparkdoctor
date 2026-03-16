@@ -114,11 +114,6 @@ class ChainLengthRule(Rule):
                     if alias.name and alias.name.startswith("pyspark.sql.types"):
                         name = alias.asname if alias.asname else alias.name
                         type_names.add(name)
-                        # For unaliased `import pyspark.sql.types`,
-                        # _chain_root_name() returns the root Name ("pyspark"),
-                        # so also store that for matching.
-                        if not alias.asname and "." in alias.name:
-                            type_names.add(alias.name.split(".")[0])
         return type_names
 
     @staticmethod
@@ -127,17 +122,37 @@ class ChainLengthRule(Rule):
 
         Also recognises module-qualified constructors like ``T.StructType()``
         by returning the attribute name when it matches a known type import.
+
+        For unaliased ``import pyspark.sql.types``, reconstructs the dotted
+        module path (e.g. ``pyspark.sql.types``) and checks against
+        ``type_names``.  This avoids storing the bare root ``"pyspark"`` which
+        would falsely match non-type chains like SparkSession builders.
         """
         current = node
+        # Track attributes seen since the last Call, so we can reconstruct
+        # the dotted module path when we reach a Name node.
+        attrs_since_last_call: list[str] = []
         while True:
             if isinstance(current, ast.Call):
                 current = current.func
+                attrs_since_last_call = []
             elif isinstance(current, ast.Attribute):
                 # Handle module-qualified type builders, e.g. T.StructType()
                 if current.attr in type_names:
                     return current.attr
+                attrs_since_last_call.append(current.attr)
                 current = current.value
             elif isinstance(current, ast.Name):
+                # For unaliased `import pyspark.sql.types`, check if any
+                # dotted prefix matches type_names.
+                # e.g. attrs = ['StructType', 'types', 'sql'], name = 'pyspark'
+                # → check "pyspark.sql", "pyspark.sql.types", etc.
+                if attrs_since_last_call:
+                    parts = [current.id] + list(reversed(attrs_since_last_call))
+                    for i in range(2, len(parts) + 1):
+                        prefix = ".".join(parts[:i])
+                        if prefix in type_names:
+                            return prefix
                 return current.id
             else:
                 return None

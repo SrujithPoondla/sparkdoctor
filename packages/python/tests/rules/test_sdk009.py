@@ -128,3 +128,48 @@ def test_array_type_chain_not_flagged():
     )
     results = check(source)
     assert results == []
+
+
+def test_unaliased_types_import_not_flagged():
+    """import pyspark.sql.types (unaliased) should still skip type chains."""
+    source = (
+        _PYSPARK
+        + "import pyspark.sql.types\n"
+        + (
+            "schema = (\n"
+            "    pyspark.sql.types.StructType()\n"
+            "    .add('name', 'string')\n"
+            "    .add('age', 'int')\n"
+            "    .add('email', 'string')\n"
+            "    .add('city', 'string')\n"
+            "    .add('state', 'string')\n"
+            "    .add('zip', 'string')\n"
+            ")\n"
+        )
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_spark_session_chain_not_falsely_skipped():
+    """SparkSession builder chain should NOT be falsely skipped as a type chain."""
+    source = (
+        _PYSPARK
+        + "import pyspark.sql.types\n"
+        + (
+            "spark = (\n"
+            "    SparkSession.builder\n"
+            "    .master('local')\n"
+            "    .appName('test')\n"
+            "    .config('a', 'b')\n"
+            "    .config('c', 'd')\n"
+            "    .config('e', 'f')\n"
+            "    .getOrCreate()\n"
+            ")\n"
+        )
+    )
+    results = check(source)
+    # 6-call chain (.master .appName .config .config .config .getOrCreate)
+    # .builder is an attribute access, not a Call
+    assert len(results) == 1
+    assert "6" in results[0].message
