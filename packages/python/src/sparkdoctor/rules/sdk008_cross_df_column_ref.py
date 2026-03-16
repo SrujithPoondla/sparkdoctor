@@ -127,12 +127,13 @@ class CrossDataFrameColumnRefRule(Rule):
                     and isinstance(current.value, ast.Name)
                     and current.value.id in df_vars
                 )
-                # df["col"].method() — Subscript on a DF variable → Column
-                is_column = is_column or (
-                    isinstance(current, ast.Subscript)
-                    and isinstance(current.value, ast.Name)
-                    and current.value.id in df_vars
-                )
+                # df["col"].method() or df["arr"][0].method() — Subscript
+                # on a DF variable → Column. Unwrap nested subscripts.
+                if not is_column and isinstance(current, ast.Subscript):
+                    sub_base = current
+                    while isinstance(sub_base, ast.Subscript):
+                        sub_base = sub_base.value
+                    is_column = isinstance(sub_base, ast.Name) and sub_base.id in df_vars
                 # Re-aliased column variable (expr = col_var.desc())
                 is_column = is_column or (
                     isinstance(current, ast.Name) and current.id in non_df_vars

@@ -190,3 +190,15 @@ def test_subscript_column_not_tracked_as_df():
     )
     results = check(source)
     assert results == []
+
+
+def test_nested_subscript_column_not_tracked_as_df():
+    """df['arr_col'][0].cast('int') nested subscript should not be a DataFrame."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "elem = df1['arr_col'][0].cast('int')\n"
+        "result = df2.select(df2.name)\n"
+    )
+    results = check(source)
+    assert results == []
