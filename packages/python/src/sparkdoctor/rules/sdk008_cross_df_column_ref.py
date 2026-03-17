@@ -20,6 +20,10 @@ class CrossDataFrameColumnRefRule(Rule):
     # Methods where cross-DF column refs are problematic
     _TARGET_METHODS = {"select", "filter", "where", "withColumn", "drop", "groupBy", "orderBy"}
 
+    # DataFrame namespace accessors — these return sub-APIs (DataFrameNaFunctions,
+    # DataFrameStatFunctions, etc.), NOT Columns. Exhaustive per PySpark API.
+    _DF_NAMESPACE_ATTRS = {"na", "stat", "write", "writeStream"}
+
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         if not _has_pyspark_import(tree):
             return []
@@ -122,10 +126,13 @@ class CrossDataFrameColumnRefRule(Rule):
                 while isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute):
                     current = current.func.value
                 # df.col_name.method() — Attribute on a DF variable → Column
+                # Exclude namespace accessors (df.na, df.stat, etc.) which
+                # return DataFrames, not Columns.
                 is_column = (
                     isinstance(current, ast.Attribute)
                     and isinstance(current.value, ast.Name)
                     and current.value.id in df_vars
+                    and current.attr not in self._DF_NAMESPACE_ATTRS
                 )
                 # df["col"].method() or df["arr"][0].method() — Subscript
                 # on a DF variable → Column. Unwrap nested subscripts.

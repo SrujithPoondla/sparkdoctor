@@ -202,3 +202,16 @@ def test_nested_subscript_column_not_tracked_as_df():
     )
     results = check(source)
     assert results == []
+
+
+def test_df_na_fill_tracked_as_df():
+    """df.na.fill(0) returns a DataFrame, not a Column."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "cleaned = df1.na.fill(0)\n"
+        "result = df2.select(cleaned.name)\n"
+    )
+    results = check(source)
+    assert len(results) == 1
+    assert "cleaned.name" in results[0].message
