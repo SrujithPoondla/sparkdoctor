@@ -45,8 +45,8 @@ Use `--verbose` for explanations and fix suggestions.
 | ID | Title | Category | Severity |
 |----|-------|----------|----------|
 | SDK001 | Hardcoded repartition or coalesce count | performance | ⚠ warning |
-| SDK002 | collect() without a preceding limit() | performance | ⚠ warning |
-| SDK003 | count() used as an emptiness check | style | ⚠ warning |
+| SDK002 | collect() without a preceding limit() | performance | ✖ error |
+| SDK003 | count() used as an emptiness check | performance | ⚠ warning |
 | SDK004 | withColumn() called inside a loop | performance | ✖ error |
 | SDK005 | Python UDF without Arrow optimization | performance | ⚠ warning |
 | SDK006 | repartition(1) or coalesce(1) | performance | ✖ error |
@@ -69,7 +69,7 @@ Use `--verbose` for explanations and fix suggestions.
 |----|-------|----------|----------|
 | SDK014 | AQE explicitly disabled | performance | ⚠ warning |
 | SDK015 | Hardcoded spark.sql.shuffle.partitions | performance | ⚠ warning |
-| SDK017 | select("*") reads all columns | style | ⚠ warning |
+| SDK017 | select("*") reads all columns | performance | ⚠ warning |
 | SDK019 | inferSchema=True in production read | correctness | ⚠ warning |
 | SDK027 | orderBy()/sort() before write is wasteful | performance | ⚠ warning |
 | SDK031 | collect() or toPandas() inside a loop | performance | ✖ error |

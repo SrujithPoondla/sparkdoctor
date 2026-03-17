@@ -153,3 +153,65 @@ def test_struct_type_not_tracked_as_df():
     )
     results = check(source)
     assert results == []
+
+
+def test_chained_column_ops_not_tracked_as_df():
+    """df.age.cast('int').alias('age') should not be tracked as a DataFrame."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "expr = df1.age.cast('int').alias('age')\n"
+        "result = df2.select(df2.name)\n"
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_re_aliased_column_not_tracked_as_df():
+    """A variable derived from another Column variable should not be a DF."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "col_var = df1.age.cast('int')\n"
+        "expr = col_var.desc()\n"
+        "result = df2.select(df2.name)\n"
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_subscript_column_not_tracked_as_df():
+    """df['col'].cast('int') via subscript should not be treated as a DataFrame."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "typed_col = df1['age'].cast('int')\n"
+        "result = df2.select(df2.name)\n"
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_nested_subscript_column_not_tracked_as_df():
+    """df['arr_col'][0].cast('int') nested subscript should not be a DataFrame."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "elem = df1['arr_col'][0].cast('int')\n"
+        "result = df2.select(df2.name)\n"
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_df_na_fill_tracked_as_df():
+    """df.na.fill(0) returns a DataFrame, not a Column."""
+    source = _PYSPARK + (
+        "df1 = spark.read.parquet('a')\n"
+        "df2 = spark.read.parquet('b')\n"
+        "cleaned = df1.na.fill(0)\n"
+        "result = df2.select(cleaned.name)\n"
+    )
+    results = check(source)
+    assert len(results) == 1
+    assert "cleaned.name" in results[0].message

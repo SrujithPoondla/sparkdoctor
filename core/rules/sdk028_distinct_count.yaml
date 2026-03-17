@@ -4,19 +4,20 @@ severity: warning
 category: performance
 languages: [python, scala, java]
 explanation: >-
-  distinct().count() forces Spark to execute two passes: a full shuffle to
-  deduplicate rows, then a second action to count the result. This is
-  significantly more expensive than using countDistinct() or
-  approx_count_distinct(), which combine both operations into a single
-  aggregate.
+  When preceded by a column selection (.select() or column subscript),
+  distinct().count() forces two passes — a shuffle to deduplicate, then a
+  second action to count. countDistinct() combines both into a single
+  aggregate. This rule only fires when countDistinct() is a valid
+  replacement (column-selected data), not on whole-row distinct().count()
+  where there is no single-pass alternative.
 suggestion: >-
   Use countDistinct() for exact counts or approx_count_distinct() for
   faster approximate counts:
 
     from pyspark.sql.functions import countDistinct, approx_count_distinct
-    df.select(countDistinct("user_id"))
-    df.select(approx_count_distinct("user_id", rsd=0.05))
+    df.agg(countDistinct("user_id"))
+    df.agg(approx_count_distinct("user_id", rsd=0.05))
 
-  Caveat: countDistinct() ignores NULLs while distinct().count() treats
+  Note: countDistinct() ignores NULLs while distinct().count() treats
   NULL as a distinct value. Verify your query does not rely on counting
   NULLs before switching.

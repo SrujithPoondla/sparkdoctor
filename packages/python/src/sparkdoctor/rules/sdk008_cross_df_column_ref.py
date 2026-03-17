@@ -20,6 +20,10 @@ class CrossDataFrameColumnRefRule(Rule):
     # Methods where cross-DF column refs are problematic
     _TARGET_METHODS = {"select", "filter", "where", "withColumn", "drop", "groupBy", "orderBy"}
 
+    # DataFrame namespace accessors — these return sub-APIs (DataFrameNaFunctions,
+    # DataFrameStatFunctions, etc.), NOT Columns. Exhaustive per PySpark API.
+    _DF_NAMESPACE_ATTRS = {"na", "stat", "write", "writeStream"}
+
     def check(self, tree: ast.AST, source_lines: list[str]) -> list[Diagnostic]:
         if not _has_pyspark_import(tree):
             return []
@@ -70,79 +74,119 @@ class CrossDataFrameColumnRefRule(Rule):
                         )
         return diagnostics
 
-    # Methods that produce Column objects, not DataFrames.
-    _COLUMN_METHODS = {
-        "getItem",
-        "getField",
-        "cast",
-        "astype",
-        "alias",
-        "name",
-        "substr",
-        "startswith",
-        "endswith",
-        "contains",
-        "like",
-        "rlike",
-        "isin",
-        "between",
-        "isNull",
-        "isNotNull",
-        "asc",
-        "desc",
-        "over",
-        "otherwise",
-        "when",
-    }
-
-    # Root names that are type constructors, not DataFrame sources.
-    _NON_DF_ROOTS = {
-        "StructType",
-        "StructField",
-        "ArrayType",
-        "MapType",
-        "StringType",
-        "IntegerType",
-        "LongType",
-        "DoubleType",
-        "FloatType",
-        "BooleanType",
-        "DateType",
-        "TimestampType",
-        "DecimalType",
-        "BinaryType",
-        "ShortType",
-        "ByteType",
-        "NullType",
-        "broadcast",
-    }
-
     def _find_df_variables(self, tree: ast.AST) -> set[str]:
         """Find variable names likely holding DataFrames.
 
-        Detects assignments of the form ``var = obj.method(...)``, which covers
-        patterns like ``spark.read.parquet()`` and ``df.filter()``.  Excludes
-        assignments from Column operations (getItem, cast, alias, etc.),
-        broadcast variables, and type constructors to reduce false positives.
+        Uses purely structural AST analysis — no hardcoded method whitelists.
+
+        Pass 1: Collect all variables assigned from method-call chains,
+        excluding non-DF imports (pyspark.sql, pyspark.sql.types,
+        pyspark.sql.functions).
+
+        Pass 2: Remove variables whose assignment has the "column access"
+        pattern — where the method's receiver is ``df.col_name`` (an
+        ``ast.Attribute`` whose ``.value`` is an ``ast.Name`` already tracked
+        as a DF variable). This catches ``df.name.getItem(0)``,
+        ``df.age.cast('int')``, etc.
         """
-        df_vars: set[str] = set()
+        non_df_names = self._collect_non_df_imports(tree)
+
+        # Pass 1 — gather all method-chain assignment candidates
+        # Maps variable name → the ast.Call value node for later inspection
+        candidates: dict[str, ast.Call] = {}
         for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                value = node.value
-                # df = spark.read... / df = other_df.filter(...)
-                if isinstance(value, ast.Call) and isinstance(value.func, ast.Attribute):
-                    method_name = value.func.attr
-                    # Skip Column operations — these produce Column, not DataFrame
-                    if method_name in self._COLUMN_METHODS:
-                        continue
-                    # Skip type constructors and broadcast
-                    root = self._chain_root(value)
-                    if root in self._NON_DF_ROOTS:
-                        continue
-                    for target in node.targets:
-                        if isinstance(target, ast.Name):
-                            df_vars.add(target.id)
-        return df_vars
+            if not isinstance(node, ast.Assign):
+                continue
+            value = node.value
+            if not isinstance(value, ast.Call) or not isinstance(value.func, ast.Attribute):
+                continue
+            # Exclude if root is a non-DF import (types, functions)
+            root = self._chain_root(value)
+            if root in non_df_names:
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    candidates[target.id] = value
+
+        # Pass 2 — remove Column-pattern assignments
+        # Walk through chained Call layers to find the ultimate receiver.
+        # e.g. df.age.cast("int").alias("age") → peel off alias() and cast()
+        # to reach df.age — an Attribute on a DF variable → Column, not DF.
+        # Also handles re-aliased Column variables (expr = col_var.desc()).
+        df_vars = set(candidates.keys())
+        non_df_vars: set[str] = set()
+        changed = True
+        while changed:
+            changed = False
+            for var_name, call_node in candidates.items():
+                if var_name in non_df_vars:
+                    continue
+                # Walk through chained calls to find the base receiver
+                current: ast.AST = call_node.func.value
+                while isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute):
+                    current = current.func.value
+                # df.col_name.method() — Attribute on a DF variable → Column
+                # Exclude namespace accessors (df.na, df.stat, etc.) which
+                # return DataFrames, not Columns.
+                is_column = (
+                    isinstance(current, ast.Attribute)
+                    and isinstance(current.value, ast.Name)
+                    and current.value.id in df_vars
+                    and current.attr not in self._DF_NAMESPACE_ATTRS
+                )
+                # df["col"].method() or df["arr"][0].method() — Subscript
+                # on a DF variable → Column. Unwrap nested subscripts.
+                if not is_column and isinstance(current, ast.Subscript):
+                    sub_base = current
+                    while isinstance(sub_base, ast.Subscript):
+                        sub_base = sub_base.value
+                    is_column = isinstance(sub_base, ast.Name) and sub_base.id in df_vars
+                # Re-aliased column variable (expr = col_var.desc())
+                is_column = is_column or (
+                    isinstance(current, ast.Name) and current.id in non_df_vars
+                )
+                if is_column:
+                    non_df_vars.add(var_name)
+                    changed = True
+
+        return df_vars - non_df_vars
+
+    @staticmethod
+    def _collect_non_df_imports(tree: ast.AST) -> set[str]:
+        """Collect imported names that are not DataFrames.
+
+        Handles both ``from pyspark.sql import X`` (ImportFrom) and
+        ``import pyspark.sql.types as T`` (Import).  Includes names from
+        ``pyspark.sql`` (SparkSession, etc.), ``pyspark.sql.types``, and
+        ``pyspark.sql.functions``.
+        """
+        non_df: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                mod = node.module
+                if (
+                    mod == "pyspark.sql"
+                    or mod.startswith("pyspark.sql.types")
+                    or mod.startswith("pyspark.sql.functions")
+                ):
+                    for alias in node.names:
+                        name = alias.asname if alias.asname else alias.name
+                        non_df.add(name)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name and (
+                        alias.name == "pyspark.sql"
+                        or alias.name.startswith("pyspark.sql.types")
+                        or alias.name.startswith("pyspark.sql.functions")
+                    ):
+                        name = alias.asname if alias.asname else alias.name
+                        non_df.add(name)
+                        # For unaliased imports like `import pyspark.sql.types`,
+                        # _chain_root() returns the root Name ("pyspark"), so
+                        # also store that for matching.
+                        if not alias.asname and "." in alias.name:
+                            non_df.add(alias.name.split(".")[0])
+        return non_df
 
     @staticmethod
     def _chain_root(node: ast.AST) -> str | None:

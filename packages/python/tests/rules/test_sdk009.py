@@ -7,6 +7,7 @@ from sparkdoctor.rules.sdk009_chain_length import ChainLengthRule
 RULE = ChainLengthRule()
 
 _PYSPARK = "from pyspark.sql import SparkSession\n"
+_PYSPARK_TYPES = _PYSPARK + "from pyspark.sql.types import StructType, ArrayType, StringType\n"
 
 
 def check(source: str):
@@ -76,7 +77,7 @@ def test_nested_chains_detected_independently():
 
 def test_struct_type_chain_not_flagged():
     """StructType().add().add()... schema builders should not trigger."""
-    source = _PYSPARK + (
+    source = _PYSPARK_TYPES + (
         "schema = (\n"
         "    StructType()\n"
         "    .add('name', 'string')\n"
@@ -93,16 +94,20 @@ def test_struct_type_chain_not_flagged():
 
 def test_module_qualified_struct_type_not_flagged():
     """T.StructType().add().add()... with import alias should not trigger."""
-    source = _PYSPARK + (
-        "schema = (\n"
-        "    T.StructType()\n"
-        "    .add('name', 'string')\n"
-        "    .add('age', 'int')\n"
-        "    .add('email', 'string')\n"
-        "    .add('city', 'string')\n"
-        "    .add('state', 'string')\n"
-        "    .add('zip', 'string')\n"
-        ")\n"
+    source = (
+        _PYSPARK
+        + "import pyspark.sql.types as T\n"
+        + (
+            "schema = (\n"
+            "    T.StructType()\n"
+            "    .add('name', 'string')\n"
+            "    .add('age', 'int')\n"
+            "    .add('email', 'string')\n"
+            "    .add('city', 'string')\n"
+            "    .add('state', 'string')\n"
+            "    .add('zip', 'string')\n"
+            ")\n"
+        )
     )
     results = check(source)
     assert results == []
@@ -110,7 +115,7 @@ def test_module_qualified_struct_type_not_flagged():
 
 def test_array_type_chain_not_flagged():
     """ArrayType and other type builders should not trigger."""
-    source = _PYSPARK + (
+    source = _PYSPARK_TYPES + (
         "schema = (\n"
         "    StructType()\n"
         "    .add('a', ArrayType(StringType()))\n"
@@ -123,3 +128,48 @@ def test_array_type_chain_not_flagged():
     )
     results = check(source)
     assert results == []
+
+
+def test_unaliased_types_import_not_flagged():
+    """import pyspark.sql.types (unaliased) should still skip type chains."""
+    source = (
+        _PYSPARK
+        + "import pyspark.sql.types\n"
+        + (
+            "schema = (\n"
+            "    pyspark.sql.types.StructType()\n"
+            "    .add('name', 'string')\n"
+            "    .add('age', 'int')\n"
+            "    .add('email', 'string')\n"
+            "    .add('city', 'string')\n"
+            "    .add('state', 'string')\n"
+            "    .add('zip', 'string')\n"
+            ")\n"
+        )
+    )
+    results = check(source)
+    assert results == []
+
+
+def test_spark_session_chain_not_falsely_skipped():
+    """SparkSession builder chain should NOT be falsely skipped as a type chain."""
+    source = (
+        _PYSPARK
+        + "import pyspark.sql.types\n"
+        + (
+            "spark = (\n"
+            "    SparkSession.builder\n"
+            "    .master('local')\n"
+            "    .appName('test')\n"
+            "    .config('a', 'b')\n"
+            "    .config('c', 'd')\n"
+            "    .config('e', 'f')\n"
+            "    .getOrCreate()\n"
+            ")\n"
+        )
+    )
+    results = check(source)
+    # 6-call chain (.master .appName .config .config .config .getOrCreate)
+    # .builder is an attribute access, not a Call
+    assert len(results) == 1
+    assert "6" in results[0].message

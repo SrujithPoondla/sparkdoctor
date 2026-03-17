@@ -1,7 +1,7 @@
 rule_id: SDK003
 title: "count() used as an emptiness check"
 severity: warning
-category: style
+category: performance
 languages: [python, scala, java]
 explanation: >-
   count() forces a full scan of the entire dataset to return a single number.

@@ -95,3 +95,78 @@ n = df.filter(df.active).select("user_id").distinct().count()
 """
     results = check(source)
     assert len(results) == 1
+
+
+def test_bare_distinct_count_not_flagged():
+    """Whole-row distinct().count() has no better alternative — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df.distinct().count()
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_subscript_distinct_count():
+    """df[["col"]].distinct().count() should be flagged."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df[["user_id"]].distinct().count()
+"""
+    results = check(source)
+    assert len(results) == 1
+    assert results[0].rule_id == "SDK028"
+    assert "distinct().count()" in results[0].message
+
+
+def test_select_star_distinct_count_not_flagged():
+    """select('*').distinct().count() is whole-row — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df.select("*").distinct().count()
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_bare_drop_duplicates_without_args_not_flagged():
+    """dropDuplicates() without column args is whole-row — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df.dropDuplicates().count()
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_drop_duplicates_keyword_subset():
+    """dropDuplicates(subset=["col"]) keyword form should be flagged."""
+    source = """\
+from pyspark.sql import SparkSession
+n = df.dropDuplicates(subset=["col"]).count()
+"""
+    results = check(source)
+    assert len(results) == 1
+    assert results[0].rule_id == "SDK028"
+
+
+def test_select_col_star_not_flagged():
+    """select(col('*')).distinct().count() is whole-row — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
+n = df.select(col("*")).distinct().count()
+"""
+    results = check(source)
+    assert results == []
+
+
+def test_select_f_col_star_not_flagged():
+    """select(F.col('*')).distinct().count() is whole-row — skip it."""
+    source = """\
+from pyspark.sql import SparkSession
+import pyspark.sql.functions as F
+n = df.select(F.col("*")).distinct().count()
+"""
+    results = check(source)
+    assert results == []

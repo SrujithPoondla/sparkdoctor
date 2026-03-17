@@ -1,6 +1,6 @@
 rule_id: SDK002
 title: "collect() without a preceding limit()"
-severity: warning
+severity: error
 category: performance
 languages: [python, scala, java]
 explanation: >-

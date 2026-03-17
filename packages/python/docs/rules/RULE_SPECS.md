@@ -61,7 +61,7 @@ If you need explicit control, derive the count from data size:
 
 ## SDK002 — Collect Without Limit
 
-**Severity:** WARNING
+**Severity:** ERROR
 **Title:** collect() without a preceding limit()
 
 ### What to detect
